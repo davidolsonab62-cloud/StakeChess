@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: stakechess-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port 8000
+    envVars:
+      - key: MONGO_URL
+        scope: build,runtime
+      - key: DB_NAME
+        scope: build,runtime
+      - key: JWT_SECRET
+        scope: build,runtime
+      - key: CORS_ORIGINS
+        scope: build,runtime
+      - key: REACT_APP_API_URL
+        scope: build,runtime
+      - key: REACT_APP_BACKEND_URL
+        scope: build,runtime
