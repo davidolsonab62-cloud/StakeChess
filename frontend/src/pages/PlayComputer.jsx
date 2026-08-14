@@ -99,7 +99,6 @@ export default function PlayComputer() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [savedComputerMatch, setSavedComputerMatch] = useState(null);
   const [savedMatchCountdown, setSavedMatchCountdown] = useState(0);
-  const [boardWidth, setBoardWidth] = useState(560);
   const boardWrapperRef = useRef(null);
   
   // Click-to-move state
@@ -133,18 +132,6 @@ export default function PlayComputer() {
     setSavedComputerMatch(null);
   }, []);
 
-  useEffect(() => {
-    const updateBoardWidth = () => {
-      const wrapperWidth = boardWrapperRef.current?.clientWidth;
-      const availableWidth = wrapperWidth || window.innerWidth - 64;
-      const calculated = Math.min(Math.max(availableWidth, 240), 760);
-      setBoardWidth(calculated);
-    };
-
-    updateBoardWidth();
-    window.addEventListener("resize", updateBoardWidth);
-    return () => window.removeEventListener("resize", updateBoardWidth);
-  }, []);
 
   useEffect(() => {
     const raw = localStorage.getItem("currentComputerMatch");
@@ -885,33 +872,52 @@ export default function PlayComputer() {
             </div>
 
             {/* Board */}
-            <div ref={boardWrapperRef} className="relative bg-surface-1 p-4 border border-hair">
+            <div
+              ref={boardWrapperRef}
+              className="relative bg-surface-1 p-2 md:p-4 rounded-sm border border-hair overflow-hidden flex items-center justify-center w-full max-w-full"
+              style={{
+                width: "100%",
+                maxWidth: "100%",
+                // clip to the available viewport so the board can never spill
+                // over the player card below it on short/mobile screens
+                maxHeight: "calc(100vh - 220px)",
+                margin: "0 auto"
+              }}
+            >
               <div
-                className="mx-auto w-full"
-                style={{ maxWidth: "min(760px, 100%, calc(100vh - 220px))", width: `${boardWidth}px`, maxHeight: "calc(100vh - 220px)", margin: "0 auto", height: "auto" }}
+                style={{
+                  width: "100%",
+                  maxWidth: "min(760px, calc(100vw - 40px), calc(100vh - 260px))",
+                  // keep a square aspect while respecting available viewport space
+                  aspectRatio: "1",
+                  height: "auto",
+                  margin: "0 auto",
+                  display: "block",
+                  maxHeight: "calc(100vh - 260px)",
+                  // chrome (corners/shadow/clip) lives here, not on the library's boardStyle
+                  overflow: "hidden",
+                }}
               >
-                <div style={{ width: "100%", aspectRatio: "1", maxHeight: "100%", height: "auto" }}>
-                  <Chessboard
-                    key={`${boardThemeName}-${boardColorName}`}
-                    options={{
-                      id: "ComputerChessboard",
-                      position: position,
-                      onPieceDrop: onPieceDrop,
-                      onSquareClick: onSquareClick,
-                      boardOrientation: boardOrientation,
-                      darkSquareStyle: { backgroundColor: boardSquareColors.dark },
-                      lightSquareStyle: { backgroundColor: boardSquareColors.light },
-                      squareStyles: customSquareStyles,
-                      boardStyle: {
-                        width: "100%",
-                        height: "100%",
-                      },
-                      animationDurationInMs: 150,
-                      allowDragging: !gameOver && !computerThinking,
-                      showNotation: true,
-                    }}
-                  />
-                </div>
+                <Chessboard
+                  key={`${boardThemeName}-${boardColorName}`}
+                  options={{
+                    id: "ComputerChessboard",
+                    position: position,
+                    onPieceDrop: onPieceDrop,
+                    onSquareClick: onSquareClick,
+                    boardOrientation: boardOrientation,
+                    darkSquareStyle: { backgroundColor: boardSquareColors.dark },
+                    lightSquareStyle: { backgroundColor: boardSquareColors.light },
+                    squareStyles: customSquareStyles,
+                    boardStyle: {
+                      width: "100%",
+                      height: "100%",
+                    },
+                    animationDurationInMs: 150,
+                    allowDragging: !gameOver && !computerThinking,
+                    showNotation: true,
+                  }}
+                />
               </div>
             </div>
 
