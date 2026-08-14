@@ -131,8 +131,8 @@ export default function Leaderboard() {
         {loading ? (
           <SkeletonPanel rows={6} title={false} />
         ) : (
-          <div className="overflow-hidden rounded-sm border border-hair bg-surface-1">
-            <table className="min-w-full border-collapse text-sm">
+          <div className="overflow-x-auto rounded-sm border border-hair bg-surface-1">
+            <table className="min-w-[640px] w-full border-collapse text-sm">
               <thead className="bg-surface-2 text-ink-secondary text-xs uppercase tracking-[0.16em]">
                 <tr>
                   <th className="px-3 py-3 text-left">#</th>

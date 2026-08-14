@@ -412,8 +412,8 @@ export default function AdminPanel() {
               User Management
             </h2>
 
-            <div className="bg-surface-1 border border-hair rounded-sm overflow-x-auto">
-              <Table>
+            <div className="bg-surface-1 border border-hair rounded-sm">
+              <Table className="min-w-[640px]">
                 <TableHeader>
                   <TableRow className="border-hair hover:bg-transparent">
                     <TableHead className="text-ink-secondary">User</TableHead>
@@ -609,7 +609,7 @@ export default function AdminPanel() {
                   <p className="text-ink-secondary">No pending withdrawals</p>
                 </div>
               ) : (
-                <Table>
+                <Table className="min-w-[640px]">
                   <TableHeader>
                     <TableRow className="border-hair">
                       <TableHead className="text-ink-secondary">User</TableHead>
@@ -685,7 +685,7 @@ export default function AdminPanel() {
                   <p className="text-ink-secondary">No completed withdrawals yet</p>
                 </div>
               ) : (
-                <Table>
+                <Table className="min-w-[700px]">
                   <TableHeader>
                     <TableRow className="border-hair">
                       <TableHead className="text-ink-secondary">User</TableHead>
