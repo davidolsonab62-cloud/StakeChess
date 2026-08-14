@@ -511,7 +511,7 @@ export default function Lobby() {
       </div>
 
       {currentGameId && expiryCountdown > 0 && (
-        <div className="mb-4 rounded-lg border border-hair bg-yellow-50 p-4 flex items-center justify-between">
+        <div className="mb-4 rounded-lg border border-hair bg-yellow-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <p className="font-semibold">You have a pending game</p>
             <p className="text-sm text-ink-secondary">Resume your created match before the timer expires.</p>
@@ -694,7 +694,7 @@ export default function Lobby() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                       {game.stake_amount > 0 ? (
                         <div className="px-3.5 py-2 rounded-lg" style={{ background: "var(--surface-2)", border: "1px solid var(--hairline)" }}>
                           <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Stake</p>
@@ -708,7 +708,7 @@ export default function Lobby() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Button
                           variant="outline"
                           onClick={() => shareMatchLink(game.game_id, "Match")}

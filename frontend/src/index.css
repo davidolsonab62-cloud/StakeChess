@@ -68,11 +68,22 @@
     border-color: var(--hairline);
 }
 
+html {
+    /* Prevents any stray wide element (fixed-width table, off-canvas
+       mobile sidebar, etc.) from creating page-level horizontal scroll,
+       which is what makes mobile layouts feel broken/unresponsive even
+       when individual components are otherwise fine. */
+    overflow-x: hidden;
+    width: 100%;
+}
+
 body {
     margin: 0;
     font-family: 'DM Sans', 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    width: 100%;
     /* background-color and color come from src/styles/tokens.css (--surface-0 / --text-primary),
        which flips automatically based on the [data-theme] attribute set by ThemeProvider. */
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
@@ -88,6 +88,22 @@ export default function ImportPGN() {
   const [shareUrl, setShareUrl] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
+  const [boardWidth, setBoardWidth] = useState(420);
+  // Measures the board wrapper's actual content width so the replay board
+  // never overflows narrow screens (it used to render at a fixed 420px).
+  const boardWrapperRef = useRef(null);
+
+  useEffect(() => {
+    const node = boardWrapperRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setBoardWidth(Math.max(200, Math.floor(entry.contentRect.width)));
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const chatKey = useMemo(() => {
     if (!pgn) return "import_pgn_chat_default";
@@ -401,8 +417,15 @@ export default function ImportPGN() {
               </div>
 
               <div className="flex justify-center">
-                <div className="rounded-xl border border-hair bg-surface-2 p-4">
-                  <Chessboard position={position} arePiecesDraggable={false} boardWidth={420} />
+                <div ref={boardWrapperRef} className="w-full max-w-[420px] rounded-xl border border-hair bg-surface-2 p-3 box-border">
+                  <Chessboard
+                    options={{
+                      id: "ImportPgnReplayBoard",
+                      position: position,
+                      arePiecesDraggable: false,
+                      boardWidth: boardWidth,
+                    }}
+                  />
                 </div>
               </div>
               <div className="rounded-2xl border border-hair bg-surface-2 p-4">

@@ -519,7 +519,7 @@ export default function BoardEditor() {
               touchAction: "none",
               width: "100%",
               maxWidth: 520,
-              minWidth: 260,
+              minWidth: 0,
               aspectRatio: "1 / 1",
             }}
           >

@@ -583,15 +583,15 @@ export default function Profile() {
       {isOwnProfile && displayUser?.wallet_balance && (
         <div className="rounded-2xl p-6 mb-5" style={cardStyle}>
           <h2 className="font-display font-bold text-[16px] mb-4">Wallet balance</h2>
-          <div className="grid grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3.5">
             {[
               { sym: "USDT", val: `$${displayUser.wallet_balance.USDT?.toFixed(2) || "0.00"}`, color: "var(--green)" },
               { sym: "BTC", val: displayUser.wallet_balance.BTC?.toFixed(6) || "0.000000", color: "var(--orange)" },
               { sym: "ETH", val: displayUser.wallet_balance.ETH?.toFixed(6) || "0.000000", color: "var(--brand)" },
             ].map((c) => (
-              <div key={c.sym} className="p-4 rounded-xl" style={{ background: "var(--surface-2)" }}>
+              <div key={c.sym} className="p-3 sm:p-4 rounded-xl min-w-0" style={{ background: "var(--surface-2)" }}>
                 <p className="text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{c.sym}</p>
-                <p className="font-mono text-xl font-bold" style={{ color: c.color }}>{c.val}</p>
+                <p className="font-mono text-base sm:text-xl font-bold truncate" style={{ color: c.color }}>{c.val}</p>
               </div>
             ))}
           </div>

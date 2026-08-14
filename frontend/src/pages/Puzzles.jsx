@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
@@ -23,6 +23,11 @@ export default function Puzzles() {
   const [solving, setSolving] = useState(false);
   const [hintsVisible, setHintsVisible] = useState(0);
   const [boardWidth, setBoardWidth] = useState(520);
+  // Measures the actual rendered width of the board's wrapper (rather than
+  // guessing from window.innerWidth) so the board always fits its container
+  // exactly, including on narrow phones where sidebar/page/card padding
+  // eats into the available space.
+  const boardWrapperRef = useRef(null);
   const [statusMessage, setStatusMessage] = useState(null);
   const [chess, setChess] = useState(() => new Chess());
   const [position, setPosition] = useState("start");
@@ -43,9 +48,20 @@ export default function Puzzles() {
   const puzzleDescription = puzzle?.description || puzzle?.objective || "This puzzle's goal will appear once the position loads.";
   const puzzleSideToMove = puzzle?.side_to_move || "White";
 
-  const updateBoardWidth = useCallback(() => {
-    const width = Math.min(560, Math.max(280, window.innerWidth - 64));
-    setBoardWidth(width);
+  // Tracks the wrapper's own content width via ResizeObserver, so the board
+  // is sized to what's actually available (accounting for page padding,
+  // card padding, and the sidebar) instead of a rough viewport estimate.
+  useEffect(() => {
+    const node = boardWrapperRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const width = Math.max(200, Math.floor(entry.contentRect.width));
+      setBoardWidth(width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
   }, []);
 
   const fetchProgress = useCallback(async () => {
@@ -96,11 +112,7 @@ export default function Puzzles() {
     }
   }, [token]);
 
-  useEffect(() => {
-    updateBoardWidth();
-    window.addEventListener("resize", updateBoardWidth);
-    return () => window.removeEventListener("resize", updateBoardWidth);
-  }, [updateBoardWidth]);
+
 
   useEffect(() => {
     if (!authLoading) {
@@ -333,7 +345,7 @@ export default function Puzzles() {
             </div>
 
             <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start">
-              <div className="mx-auto w-full max-w-[560px] rounded-3xl border border-hair bg-surface-1 p-4">
+              <div ref={boardWrapperRef} className="mx-auto w-full max-w-[560px] rounded-3xl border border-hair bg-surface-1 p-4 box-border">
                 {puzzle ? (
                   <Chessboard
                     key={`${boardThemeName}-${boardColorName}`}

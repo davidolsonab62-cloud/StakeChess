@@ -327,7 +327,7 @@ export default function Tournaments() {
           <p style={{ color: "var(--text-secondary)" }}>Compete for prizes in 24/7 tournaments</p>
         </div>
 
-        <div className="flex justify-center gap-3 mb-6">
+        <div className="flex flex-wrap justify-center gap-3 mb-6">
           <Button
             onClick={() => handleTabChange("all")}
             className={`uppercase tracking-wider font-bold ${
