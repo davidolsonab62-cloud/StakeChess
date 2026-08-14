@@ -1,0 +1,140 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\USER\\Documents\\My Projects\\Sttakechess\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [44356] using WatchFiles
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 76, in subprocess_started
+    target(sockets=sockets)
+    ~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\server.py", line 68, in serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+                      ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\importer.py", line 24, in import_from_string
+    raise exc from None
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1395, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\server.py", line 5, in <module>
+    from motor.motor_asyncio import AsyncIOMotorClient
+ModuleNotFoundError: No module named 'motor'
+WARNING:  WatchFiles detected changes in '.venv\Lib\site-packages\pymongo\client_options.py', '.venv\Lib\site-packages\pymongo\asynchronous\change_stream.py', '.venv\Lib\site-packages\pymongo\__init__.py', '.venv\Lib\site-packages\pymongo\periodic_executor.py', '.venv\Lib\site-packages\bson\codec_options.py', '.venv\Lib\site-packages\pymongo\cursor_shared.py', '.venv\Lib\site-packages\pymongo\asynchronous\monitor.py', '.venv\Lib\site-packages\pymongo\read_concern.py', '.venv\Lib\site-packages\pymongo\synchronous\cursor_base.py', '.venv\Lib\site-packages\pymongo\_asyncio_lock.py', '.venv\Lib\site-packages\pymongo\asynchronous\collection.py', '.venv\Lib\site-packages\gridfs\asynchronous\grid_file.py', '.venv\Lib\site-packages\pymongo\ocsp_cache.py', '.venv\Lib\site-packages\bson\max_key.py', '.venv\Lib\site-packages\pymongo\server_description.py', '.venv\Lib\site-packages\gridfs\synchronous\__init__.py', '.venv\Lib\site-packages\bson\_helpers.py', '.venv\Lib\site-packages\pymongo\mongo_client.py', '.venv\Lib\site-packages\bson\code.py', '.venv\Lib\site-packages\bson\timestamp.py', '.venv\Lib\site-packages\pymongo\server_type.py', '.venv\Lib\site-packages\pymongo\database.py', '.venv\Lib\site-packages\pymongo\asynchronous\cursor.py', '.venv\Lib\site-packages\pymongo\asynchronous\client_bulk.py', '.venv\Lib\site-packages\pymongo\ssl_support.py', '.venv\Lib\site-packages\pymongo\synchronous\pool.py', '.venv\Lib\site-packages\bson\binary.py', '.venv\Lib\site-packages\pymongo\_client_bulk_shared.py', '.venv\Lib\site-packages\pymongo\socket_checker.py', '.venv\Lib\site-packages\pymongo\synchronous\helpers.py', '.venv\Lib\site-packages\pymongo\ssl_context.py', '.venv\Lib\site-packages\pymongo\cursor.py', '.venv\Lib\site-packages\pymongo\server_api.py', '.venv\Lib\site-packages\pymongo\lock.py', '.venv\Lib\site-packages\gridfs\grid_file_shared.py', '.venv\Lib\site-packages\pymongo\_csot.py', '.venv\Lib\site-packages\bson\objectid.py', '.venv\Lib\site-packages\pymongo\write_concern.py', '.venv\Lib\site-packages\pymongo\monitoring.py', '.venv\Lib\site-packages\pymongo\ocsp_support.py', '.venv\Lib\site-packages\pymongo\event_loggers.py', '.venv\Lib\site-packages\bson\dbref.py', '.venv\Lib\site-packages\pymongo\asynchronous\helpers.py', '.venv\Lib\site-packages\pymongo\collation.py', '.venv\Lib\site-packages\bson\__init__.py', '.venv\Lib\site-packages\pymongo\topology_description.py', '.venv\Lib\site-packages\pymongo\asynchronous\auth_aws.py', '.venv\Lib\site-packages\pymongo\daemon.py', '.venv\Lib\site-packages\pymongo\auth_oidc_shared.py', '.venv\Lib\site-packages\pymongo\synchronous\srv_resolver.py', '.venv\Lib\site-packages\bson\son.py', '.venv\Lib\site-packages\pymongo\synchronous\settings.py', '.venv\Lib\site-packages\pymongo\synchronous\auth_oidc.py', '.venv\Lib\site-packages\pymongo\encryption_options.py', '.venv\Lib\site-packages\pymongo\driver_info.py', '.venv\Lib\site-packages\pymongo\helpers_shared.py', '.venv\Lib\site-packages\gridfs\errors.py', '.venv\Lib\site-packages\pymongo\asynchronous\database.py', '.venv\Lib\site-packages\pymongo\synchronous\encryption.py', '.venv\Lib\site-packages\gridfs\grid_file.py', '.venv\Lib\site-packages\gridfs\synchronous\grid_file.py', '.venv\Lib\site-packages\pymongo\synchronous\database.py', '.venv\Lib\site-packages\gridfs\asynchronous\__init__.py', '.venv\Lib\site-packages\pymongo\_version.py', '.venv\Lib\site-packages\pymongo\pyopenssl_context.py', '.venv\Lib\site-packages\pymongo\asynchronous\settings.py', '.venv\Lib\site-packages\pymongo\synchronous\topology.py', '.venv\Lib\site-packages\pymongo\synchronous\server.py', '.venv\Lib\site-packages\pymongo\client_session.py', '.venv\Lib\site-packages\pymongo\_gcp_helpers.py', '.venv\Lib\site-packages\pymongo\network_layer.py', '.venv\Lib\site-packages\pymongo\asynchronous\uri_parser.py', '.venv\Lib\site-packages\pymongo\logger.py', '.venv\Lib\site-packages\pymongo\uri_parser_shared.py', '.venv\Lib\site-packages\bson\decimal128.py', '.venv\Lib\site-packages\pymongo\pool_options.py', '.venv\Lib\site-packages\pymongo\asynchronous\aggregation.py', '.venv\Lib\site-packages\bson\min_key.py', '.venv\Lib\site-packages\pymongo\synchronous\uri_parser.py', '.venv\Lib\site-packages\pymongo\synchronous\cursor.py', '.venv\Lib\site-packages\pymongo\synchronous\__init__.py', '.venv\Lib\site-packages\pymongo\auth.py', '.venv\Lib\site-packages\pymongo\command_cursor.py', '.venv\Lib\site-packages\pymongo\auth_oidc.py', '.venv\Lib\site-packages\pymongo\synchronous\client_session.py', '.venv\Lib\site-packages\pymongo\uri_parser.py', '.venv\Lib\site-packages\pymongo\_azure_helpers.py', '.venv\Lib\site-packages\bson\datetime_ms.py', '.venv\Lib\site-packages\pymongo\asynchronous\bulk.py', '.venv\Lib\site-packages\pymongo\max_staleness_selectors.py', '.venv\Lib\site-packages\pymongo\synchronous\auth.py', '.venv\Lib\site-packages\pymongo\read_preferences.py', '.venv\Lib\site-packages\pymongo\_asyncio_task.py', '.venv\Lib\site-packages\pymongo\compression_support.py', '.venv\Lib\site-packages\pymongo\synchronous\change_stream.py', '.venv\Lib\site-packages\pymongo\typings.py', '.venv\Lib\site-packages\pymongo\synchronous\aggregation.py', '.venv\Lib\site-packages\pymongo\encryption.py', '.venv\Lib\site-packages\pymongo\asynchronous\client_session.py', '.venv\Lib\site-packages\pymongo\errors.py', '.venv\Lib\site-packages\pymongo\synchronous\network.py', '.venv\Lib\site-packages\pymongo\server_selectors.py', '.venv\Lib\site-packages\pymongo\collection.py', '.venv\Lib\site-packages\pymongo\response.py', '.venv\Lib\site-packages\bson\regex.py', '.venv\Lib\site-packages\pymongo\synchronous\monitor.py', '.venv\Lib\site-packages\pymongo\asynchronous\auth_oidc.py', '.venv\Lib\site-packages\pymongo\hello.py', '.venv\Lib\site-packages\pymongo\asynchronous\__init__.py', '.venv\Lib\site-packages\pymongo\change_stream.py', '.venv\Lib\site-packages\bson\int64.py', '.venv\Lib\site-packages\pymongo\asynchronous\command_cursor.py', '.venv\Lib\site-packages\pymongo\synchronous\mongo_client.py', '.venv\Lib\site-packages\pymongo\asynchronous\mongo_client.py', '.venv\Lib\site-packages\pymongo\database_shared.py', '.venv\Lib\site-packages\gridfs\__init__.py', '.venv\Lib\site-packages\pymongo\asynchronous\auth.py', '.venv\Lib\site-packages\pymongo\asynchronous\network.py', '.venv\Lib\site-packages\pymongo\saslprep.py', '.venv\Lib\site-packages\pymongo\asynchronous\encryption.py', '.venv\Lib\site-packages\pymongo\asynchronous\srv_resolver.py', '.venv\Lib\site-packages\pymongo\asynchronous\topology.py', '.venv\Lib\site-packages\pymongo\synchronous\auth_aws.py', '.venv\Lib\site-packages\pymongo\synchronous\bulk.py', '.venv\Lib\site-packages\bson\errors.py', '.venv\Lib\site-packages\pymongo\asynchronous\pool.py', '.venv\Lib\site-packages\pymongo\synchronous\command_cursor.py', '.venv\Lib\site-packages\bson\json_util.py', '.venv\Lib\site-packages\bson\tz_util.py', '.venv\Lib\site-packages\pymongo\asynchronous\server.py', '.venv\Lib\site-packages\pymongo\synchronous\collection.py', '.venv\Lib\site-packages\pymongo\pool_shared.py', '.venv\Lib\site-packages\pymongo\synchronous\client_bulk.py', '.venv\Lib\site-packages\pymongo\message.py', '.venv\Lib\site-packages\pymongo\bulk_shared.py', '.venv\Lib\site-packages\bson\typings.py', '.venv\Lib\site-packages\pymongo\common.py', '.venv\Lib\site-packages\pymongo\auth_shared.py', '.venv\Lib\site-packages\bson\raw_bson.py', '.venv\Lib\site-packages\pymongo\asynchronous\cursor_base.py', '.venv\Lib\site-packages\pymongo\pool.py', '.venv\Lib\site-packages\pymongo\operations.py', '.venv\Lib\site-packages\pymongo\results.py'. Reloading...
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 76, in subprocess_started
+    target(sockets=sockets)
+    ~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\server.py", line 68, in serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+                      ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\importer.py", line 24, in import_from_string
+    raise exc from None
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1395, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\server.py", line 5, in <module>
+    from motor.motor_asyncio import AsyncIOMotorClient
+ModuleNotFoundError: No module named 'motor'
+WARNING:  WatchFiles detected changes in '.venv\Lib\site-packages\~ymongo\hello.py', '.venv\Lib\site-packages\~son\int64.py', '.venv\Lib\site-packages\~ymongo\command_cursor.py', '.venv\Lib\site-packages\~ymongo\helpers.py', '.venv\Lib\site-packages\~ymongo\client_session.py', '.venv\Lib\site-packages\~ymongo\auth.py', '.venv\Lib\site-packages\~ridfs\grid_file.py', '.venv\Lib\site-packages\motor\motor_common.py', '.venv\Lib\site-packages\~ymongo\socket_checker.py', '.venv\Lib\site-packages\~ymongo\ocsp_support.py', '.venv\Lib\site-packages\~ymongo\max_staleness_selectors.py', '.venv\Lib\site-packages\~son\decimal128.py', '.venv\Lib\site-packages\~ymongo\message.py', '.venv\Lib\site-packages\~ymongo\saslprep.py', '.venv\Lib\site-packages\~son\typings.py', '.venv\Lib\site-packages\~son\min_key.py', '.venv\Lib\site-packages\~ymongo\lock.py', '.venv\Lib\site-packages\~ymongo\pool.py', '.venv\Lib\site-packages\~ymongo\ocsp_cache.py', '.venv\Lib\site-packages\~ymongo\ssl_support.py', '.venv\Lib\site-packages\~ymongo\encryption.py', '.venv\Lib\site-packages\~son\_helpers.py', '.venv\Lib\site-packages\~son\binary.py', '.venv\Lib\site-packages\~ymongo\settings.py', '.venv\Lib\site-packages\motor\metaprogramming.py', '.venv\Lib\site-packages\~ridfs\errors.py', '.venv\Lib\site-packages\~son\max_key.py', '.venv\Lib\site-packages\~ymongo\operations.py', '.venv\Lib\site-packages\~ymongo\database.py', '.venv\Lib\site-packages\~ymongo\server_api.py', '.venv\Lib\site-packages\~son\regex.py', '.venv\Lib\site-packages\~ymongo\cursor.py', '.venv\Lib\site-packages\~son\dbref.py', '.venv\Lib\site-packages\~ymongo\_csot.py', '.venv\Lib\site-packages\~ymongo\collation.py', '.venv\Lib\site-packages\~ymongo\ssl_context.py', '.venv\Lib\site-packages\~son\objectid.py', '.venv\Lib\site-packages\motor\aiohttp\__init__.py', '.venv\Lib\site-packages\~ymongo\monitoring.py', '.venv\Lib\site-packages\motor\__init__.py', '.venv\Lib\site-packages\~ymongo\server_description.py', '.venv\Lib\site-packages\~ymongo\encryption_options.py', '.venv\Lib\site-packages\~ymongo\errors.py', '.venv\Lib\site-packages\~son\__init__.py', '.venv\Lib\site-packages\~ymongo\compression_support.py', '.venv\Lib\site-packages\~ymongo\change_stream.py', '.venv\Lib\site-packages\motor\docstrings.py', '.venv\Lib\site-packages\motor\_version.py', '.venv\Lib\site-packages\~ymongo\srv_resolver.py', '.venv\Lib\site-packages\motor\web.py', '.venv\Lib\site-packages\~ymongo\topology.py', '.venv\Lib\site-packages\~ymongo\bulk.py', '.venv\Lib\site-packages\~ymongo\auth_aws.py', '.venv\Lib\site-packages\~ymongo\auth_oidc.py', '.venv\Lib\site-packages\~ymongo\network.py', '.venv\Lib\site-packages\~ymongo\common.py', '.venv\Lib\site-packages\motor\core.py', '.venv\Lib\site-packages\motor\frameworks\tornado\__init__.py', '.venv\Lib\site-packages\~son\timestamp.py', '.venv\Lib\site-packages\~ymongo\mongo_client.py', '.venv\Lib\site-packages\~ymongo\collection.py', '.venv\Lib\site-packages\~ymongo\server_selectors.py', '.venv\Lib\site-packages\~ymongo\server.py', '.venv\Lib\site-packages\~ymongo\_version.py', '.venv\Lib\site-packages\~ymongo\daemon.py', '.venv\Lib\site-packages\~ymongo\topology_description.py', '.venv\Lib\site-packages\motor\motor_gridfs.py', '.venv\Lib\site-packages\~ymongo\__init__.py', '.venv\Lib\site-packages\~ymongo\response.py', '.venv\Lib\site-packages\~ymongo\periodic_executor.py', '.venv\Lib\site-packages\~ymongo\read_preferences.py', '.venv\Lib\site-packages\~ymongo\uri_parser.py', '.venv\Lib\site-packages\~son\raw_bson.py', '.venv\Lib\site-packages\~son\tz_util.py', '.venv\Lib\site-packages\~son\json_util.py', '.venv\Lib\site-packages\~ymongo\write_concern.py', '.venv\Lib\site-packages\~son\errors.py', '.venv\Lib\site-packages\~ymongo\client_options.py', '.venv\Lib\site-packages\motor\frameworks\asyncio\__init__.py', '.venv\Lib\site-packages\~ymongo\typings.py', '.venv\Lib\site-packages\~ymongo\pyopenssl_context.py', '.venv\Lib\site-packages\~son\datetime_ms.py', '.venv\Lib\site-packages\~ymongo\aggregation.py', '.venv\Lib\site-packages\~ymongo\read_concern.py', '.venv\Lib\site-packages\~ymongo\results.py', '.venv\Lib\site-packages\~ymongo\driver_info.py', '.venv\Lib\site-packages\~son\code.py', '.venv\Lib\site-packages\motor\motor_asyncio.py', '.venv\Lib\site-packages\~ymongo\monitor.py', '.venv\Lib\site-packages\~ymongo\server_type.py', '.venv\Lib\site-packages\~son\codec_options.py', '.venv\Lib\site-packages\motor\frameworks\__init__.py', '.venv\Lib\site-packages\~ymongo\event_loggers.py', '.venv\Lib\site-packages\motor\motor_tornado.py', '.venv\Lib\site-packages\~son\son.py', '.venv\Lib\site-packages\~ridfs\__init__.py'. Reloading...
+Process SpawnProcess-3:
+Traceback (most recent call last):
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 76, in subprocess_started
+    target(sockets=sockets)
+    ~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\server.py", line 68, in serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+                      ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\importer.py", line 24, in import_from_string
+    raise exc from None
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\.venv\Lib\site-packages\uvicorn\importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1395, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\USER\Documents\My Projects\Sttakechess\backend\server.py", line 15, in <module>
+    import socketio
+ModuleNotFoundError: No module named 'socketio'

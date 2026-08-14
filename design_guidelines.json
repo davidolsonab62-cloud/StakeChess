@@ -1,0 +1,124 @@
+{
+  "identity": {
+    "name": "StakeChess",
+    "persona": "The High-Stakes Grandmaster",
+    "vibe": "Intellectual, Exclusive, High-Risk/High-Reward, Digital Luxury",
+    "emotional_tone": "Intense focus, premium exclusivity, adrenaline of the wager"
+  },
+  "typography": {
+    "primary_font": "Manrope",
+    "heading_font": "Cinzel Decorative",
+    "mono_font": "JetBrains Mono",
+    "weights": {
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "bold": 700,
+      "black": 900
+    },
+    "usage": {
+      "hero_heading": "font-heading font-black tracking-tight text-5xl md:text-7xl uppercase",
+      "section_heading": "font-heading font-bold tracking-tight text-3xl md:text-4xl",
+      "body": "font-sans text-base leading-relaxed text-muted-foreground",
+      "data_display": "font-mono text-sm tracking-wide uppercase"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": {
+        "default": "#050505",
+        "paper": "#0A0A0A",
+        "surface": "#121212"
+      },
+      "primary": {
+        "default": "#D4AF37",
+        "hover": "#F4C430",
+        "foreground": "#000000"
+      },
+      "secondary": {
+        "default": "#1A1A1A",
+        "hover": "#2A2A2A",
+        "foreground": "#FFFFFF"
+      },
+      "accent": {
+        "success": "#00FF94",
+        "danger": "#FF3B30",
+        "warning": "#FFD700",
+        "info": "#00C2FF"
+      },
+      "border": {
+        "default": "#27272A",
+        "active": "#D4AF37"
+      }
+    },
+    "gradients": {
+      "gold_rush": "linear-gradient(135deg, #D4AF37 0%, #AA8A2E 100%)",
+      "obsidian_sheen": "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%)",
+      "glow_text": "drop-shadow(0 0 10px rgba(212, 175, 55, 0.3))"
+    }
+  },
+  "layout": {
+    "spacing_scale": "Generous (2x standard)",
+    "container_padding": "p-6 md:p-12",
+    "grid_systems": {
+      "marketing": "Tetris Grid (Mode A) - Asymmetrical, artistic, overlapping",
+      "dashboard": "Bento Grid (Mode B) - High density, data-rich, gap-4"
+    },
+    "border_radius": {
+      "default": "rounded-none",
+      "buttons": "rounded-sm",
+      "cards": "rounded-sm"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#D4AF37] text-black hover:bg-[#F4C430] font-bold uppercase tracking-widest px-8 py-4 rounded-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]",
+      "secondary": "bg-transparent border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] uppercase tracking-widest px-8 py-4 rounded-sm"
+    },
+    "cards": {
+      "style": "The Tracing Beam",
+      "base": "bg-[#0A0A0A] border border-white/5 relative overflow-hidden group",
+      "hover": "hover:border-[#D4AF37]/50 transition-colors duration-500"
+    },
+    "inputs": {
+      "style": "Minimalist Underline or Solid Block",
+      "classes": "bg-[#121212] border-white/10 focus:border-[#D4AF37] text-white placeholder:text-white/20 rounded-sm h-12"
+    },
+    "navigation": {
+      "style": "Glassmorphism",
+      "classes": "bg-black/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-50"
+    }
+  },
+  "visual_enhancers": {
+    "textures": "Subtle noise overlay (opacity 0.03) on all dark backgrounds to prevent banding",
+    "shadows": "Ambient: shadow-[0_0_40px_-10px_rgba(0,0,0,0.5)]",
+    "effects": [
+      "Tracing Beam borders for high-value cards",
+      "Golden glow on winning moves",
+      "Glitch effect on 'Checkmate' text"
+    ]
+  },
+  "image_urls": {
+    "hero_background": "https://images.unsplash.com/photo-1741875598837-689465d88bd4?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "chess_classic": "https://images.unsplash.com/photo-1683140275090-996c8f9b4587?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "crypto_gold": "https://images.pexels.com/photos/6764230/pexels-photo-6764230.jpeg",
+    "crypto_stack": "https://images.pexels.com/photos/6764225/pexels-photo-6764225.jpeg",
+    "logo": "https://customer-assets.emergentagent.com/job_178a8217-4229-40c1-991d-9721d9feaa79/artifacts/fw6vx6e7_7B379E95-255D-4728-84D0-6AAF030954E8.png"
+  },
+  "instructions_to_main_agent": [
+    "INSTALL FONTS: Add 'Cinzel Decorative', 'Manrope', and 'JetBrains Mono' via Google Fonts in index.html immediately.",
+    "THEME ENFORCEMENT: Force DARK MODE. Do not create a light mode toggle. The brand is exclusively dark.",
+    "CHESS BOARD: Use 'chessboard.js' or 'react-chessboard' but heavily style it. The board squares should be Dark Charcoal (#1A1A1A) and Muted Gold (#4A4020). NOT black and white.",
+    "STAKING UI: The staking input should feel like a high-frequency trading terminal. Use monospace fonts for numbers.",
+    "WALLET: Simulate the wallet connection. When 'connected', show a balance in 'STAKE' tokens.",
+    "ADMIN PANEL: Use the 'Bento Grid' layout. High density. No wasted space.",
+    "NO ROUNDED CORNERS: Keep border-radius minimal (2px or 0px) for a sharp, aggressive, tactical feel.",
+    "DATA-TESTID: Every interactive element (buttons, inputs, chess squares) MUST have a data-testid attribute."
+  ],
+  "universal_guidelines": [
+    "Avoid 'AI Slop': No generic centered layouts. Use asymmetry.",
+    "Micro-Animations: Buttons should scale down slightly on click. Links should have underline animations.",
+    "Toast Notifications: Use 'sonner' for all game alerts (Check, Checkmate, Wager Placed).",
+    "Accessibility: Ensure Gold text on Black background meets 4.5:1 contrast. Adjust gold brightness if needed."
+  ]
+}
