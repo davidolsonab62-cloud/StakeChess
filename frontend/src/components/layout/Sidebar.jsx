@@ -57,85 +57,118 @@ const NAV_ITEMS = [
   { to: "/profile", label: "Profile", icon: "◐" },
 ];
 
-export default function Sidebar({ collapsed, onToggle }) {
+export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMobileClose = () => {} }) {
   const { user, logout, pendingChallengeCount, watchableMatchCount, puzzleProgress } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isAdmin = user?.role === "admin" || user?.is_admin;
   const isDark = theme === "dark";
 
+  // The collapse-to-icons feature only makes sense for the persistent desktop
+  // rail. The mobile drawer is a transient overlay, so it always renders
+  // expanded (full labels) regardless of the saved desktop preference.
+  const compact = collapsed && !mobileOpen;
+
   const rowBase =
     "flex items-center gap-3 rounded-[9px] px-3 py-2.5 text-[14px] font-medium no-underline transition-colors sc-nav-row";
 
   return (
-    <aside
-      className="hidden md:flex md:flex-col shrink-0 sc-sidebar"
-      style={{
-        width: collapsed ? 68 : 216,
-        borderRight: "1px solid var(--hairline)",
-        background: "var(--surface-0)",
-        padding: "18px 12px",
-      }}
-    >
-      {/* Brand + collapse control */}
-      <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2 px-1"} pb-5`}>
-        <Link
-          to="/"
-          className={`flex items-center ${collapsed ? "justify-center" : "gap-2 truncate"}`}
-          aria-label="Go to landing page"
-          title="StakeChess"
-          style={{ overflow: "hidden", minWidth: 0 }}
-        >
-          <BrandMark collapsed={collapsed} />
-        </Link>
-        {!collapsed && (
+    <>
+      {/* Backdrop: only present (and only needed) while the mobile drawer is open */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          style={{ background: "rgba(0, 0, 0, 0.5)" }}
+          onClick={onMobileClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed md:static inset-y-0 left-0 z-50 flex flex-col shrink-0 sc-sidebar transition-transform duration-200 ease-out md:translate-x-0 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{
+          width: compact ? 68 : 216,
+          borderRight: "1px solid var(--hairline)",
+          background: "var(--surface-0)",
+          padding: "18px 12px",
+          boxShadow: mobileOpen ? "var(--shadow-md, 0 8px 24px rgba(0,0,0,0.25))" : undefined,
+        }}
+      >
+        {/* Brand + collapse control (desktop) / close control (mobile) */}
+        <div className={`flex items-center ${compact ? "justify-center" : "gap-2 px-1"} pb-5`}>
+          <Link
+            to="/"
+            className={`flex items-center ${compact ? "justify-center" : "gap-2 truncate"}`}
+            aria-label="Go to landing page"
+            title="StakeChess"
+            style={{ overflow: "hidden", minWidth: 0 }}
+            onClick={onMobileClose}
+          >
+            <BrandMark collapsed={compact} />
+          </Link>
+          {!compact && (
+            <button
+              onClick={onToggle}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              className="ml-auto hidden md:flex h-7 w-7 items-center justify-center rounded-lg sc-icon-btn"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={onMobileClose}
+            aria-label="Close menu"
+            title="Close menu"
+            className="ml-auto flex md:hidden h-7 w-7 items-center justify-center rounded-lg sc-icon-btn"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        {compact && (
           <button
             onClick={onToggle}
-            aria-label="Collapse sidebar"
-            title="Collapse sidebar"
-            className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg sc-icon-btn"
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+            className="mb-3 hidden md:flex h-9 w-full items-center justify-center rounded-lg sc-icon-btn"
             style={{ color: "var(--text-secondary)" }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="9" y1="3" x2="9" y2="21" />
+              <line x1="15" y1="3" x2="15" y2="21" />
             </svg>
           </button>
         )}
-      </div>
 
-      {collapsed && (
-        <button
-          onClick={onToggle}
-          aria-label="Expand sidebar"
-          title="Expand sidebar"
-          className="mb-3 flex h-9 w-full items-center justify-center rounded-lg sc-icon-btn"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <line x1="15" y1="3" x2="15" y2="21" />
-          </svg>
-        </button>
-      )}
-
-      <nav className="flex flex-col gap-0.5">
+        <nav className="flex flex-col gap-0.5 overflow-y-auto">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
-            title={collapsed ? item.label : undefined}
-            className={`${rowBase} ${collapsed ? "justify-center px-0" : ""}`}
+            title={compact ? item.label : undefined}
+            className={`${rowBase} ${compact ? "justify-center px-0" : ""}`}
             style={({ isActive }) => ({
               background: isActive ? "var(--brand-dim)" : "transparent",
               color: isActive ? "var(--brand)" : "var(--text-secondary)",
             })}
+            onClick={onMobileClose}
           >
             <div className="flex items-center justify-between w-full gap-3">
               <div className="flex items-center gap-3">
                 <i className="w-[18px] text-center not-italic shrink-0">{item.icon}</i>
-                {!collapsed && item.label}
+                {!compact && item.label}
               </div>
-              {!collapsed && (
+              {!compact && (
                 <div className="flex items-center gap-2">
                   {item.to === "/challenge-queue" && pendingChallengeCount > 0 && (
                     <span className="inline-flex items-center justify-center rounded-full bg-brand text-on-brand text-[10px] font-semibold px-2 py-0.5">
@@ -160,15 +193,16 @@ export default function Sidebar({ collapsed, onToggle }) {
         {isAdmin && (
           <NavLink
             to="/admin"
-            title={collapsed ? "Admin" : undefined}
-            className={`${rowBase} ${collapsed ? "justify-center px-0" : ""}`}
+            title={compact ? "Admin" : undefined}
+            className={`${rowBase} ${compact ? "justify-center px-0" : ""}`}
             style={({ isActive }) => ({
               background: isActive ? "var(--brand-dim)" : "transparent",
               color: isActive ? "var(--brand)" : "var(--text-secondary)",
             })}
+            onClick={onMobileClose}
           >
             <i className="w-[18px] text-center not-italic shrink-0">◆</i>
-            {!collapsed && "Admin"}
+            {!compact && "Admin"}
           </NavLink>
         )}
       </nav>
@@ -180,7 +214,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         onClick={toggleTheme}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         title={isDark ? "Light mode" : "Dark mode"}
-        className={`${rowBase} w-full ${collapsed ? "justify-center px-0" : ""}`}
+        className={`${rowBase} w-full ${compact ? "justify-center px-0" : ""}`}
         style={{ color: "var(--text-secondary)", background: "transparent" }}
       >
         <i className="w-[18px] flex items-center justify-center not-italic shrink-0">
@@ -195,18 +229,19 @@ export default function Sidebar({ collapsed, onToggle }) {
             </svg>
           )}
         </i>
-        {!collapsed && (isDark ? "Light mode" : "Dark mode")}
+        {!compact && (isDark ? "Light mode" : "Dark mode")}
       </button>
 
       {user && (
         <div
-          className={`flex items-center gap-2 ${collapsed ? "justify-center" : ""}`}
+          className={`flex items-center gap-2 ${compact ? "justify-center" : ""}`}
           style={{ borderTop: "1px solid var(--hairline)", marginTop: 8, paddingTop: 6 }}
         >
           <NavLink
             to="/profile"
-            title={collapsed ? user.username || user.name : undefined}
-            className={`flex items-center gap-2.5 rounded-[9px] no-underline min-w-0 sc-nav-row ${collapsed ? "justify-center p-1.5" : "px-2 py-2.5 flex-1"}`}
+            title={compact ? user.username || user.name : undefined}
+            className={`flex items-center gap-2.5 rounded-[9px] no-underline min-w-0 sc-nav-row ${compact ? "justify-center p-1.5" : "px-2 py-2.5 flex-1"}`}
+            onClick={onMobileClose}
           >
             {user.picture ? (
               <img
@@ -223,7 +258,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                 {(user.username || user.name || "?")[0]?.toUpperCase()}
               </div>
             )}
-            {!collapsed && (
+            {!compact && (
               <div className="min-w-0">
                 <div className="text-[13px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>
                   {user.username || user.name}
@@ -234,7 +269,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               </div>
             )}
           </NavLink>
-          {!collapsed && (
+          {!compact && (
             <button
               onClick={logout}
               aria-label="Log out"
@@ -256,7 +291,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       <div
         style={{ borderTop: "1px solid var(--hairline)", marginTop: 12, paddingTop: 12 }}
       >
-        {!collapsed && (
+        {!compact && (
           <div className="mb-3 px-1">
             <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
               About StakeChess
@@ -266,51 +301,57 @@ export default function Sidebar({ collapsed, onToggle }) {
         <nav className="flex flex-col gap-0.5">
           <Link
             to="/wallet"
-            title={collapsed ? "Subscribe" : undefined}
-            className={`${rowBase} text-[13px] ${collapsed ? "justify-center px-0" : ""}`}
+            title={compact ? "Subscribe" : undefined}
+            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
             style={{ color: "var(--text-secondary)" }}
+            onClick={onMobileClose}
           >
             <i className="w-[18px] text-center not-italic shrink-0">💎</i>
-            {!collapsed && "Subscribe"}
+            {!compact && "Subscribe"}
           </Link>
           <Link
             to="/support"
-            title={collapsed ? "Support" : undefined}
-            className={`${rowBase} text-[13px] ${collapsed ? "justify-center px-0" : ""}`}
+            title={compact ? "Support" : undefined}
+            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
             style={{ color: "var(--text-secondary)" }}
+            onClick={onMobileClose}
           >
             <i className="w-[18px] text-center not-italic shrink-0">💬</i>
-            {!collapsed && "Support"}
+            {!compact && "Support"}
           </Link>
           <Link
             to="/privacy"
-            title={collapsed ? "Privacy" : undefined}
-            className={`${rowBase} text-[13px] ${collapsed ? "justify-center px-0" : ""}`}
+            title={compact ? "Privacy" : undefined}
+            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
             style={{ color: "var(--text-secondary)" }}
+            onClick={onMobileClose}
           >
             <i className="w-[18px] text-center not-italic shrink-0">🔒</i>
-            {!collapsed && "Privacy"}
+            {!compact && "Privacy"}
           </Link>
           <Link
             to="/terms"
-            title={collapsed ? "Terms" : undefined}
-            className={`${rowBase} text-[13px] ${collapsed ? "justify-center px-0" : ""}`}
+            title={compact ? "Terms" : undefined}
+            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
             style={{ color: "var(--text-secondary)" }}
+            onClick={onMobileClose}
           >
             <i className="w-[18px] text-center not-italic shrink-0">📋</i>
-            {!collapsed && "Terms"}
+            {!compact && "Terms"}
           </Link>
           <Link
             to="/database"
-            title={collapsed ? "Database" : undefined}
-            className={`${rowBase} text-[13px] ${collapsed ? "justify-center px-0" : ""}`}
+            title={compact ? "Database" : undefined}
+            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
             style={{ color: "var(--text-secondary)" }}
+            onClick={onMobileClose}
           >
             <i className="w-[18px] text-center not-italic shrink-0">📊</i>
-            {!collapsed && "Database"}
+            {!compact && "Database"}
           </Link>
         </nav>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
