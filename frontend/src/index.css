@@ -450,17 +450,17 @@ button:active:not(:disabled) {
 
 [data-theme="dark"] .sc-hero h1,
 [data-theme="dark"] .sc-hero .sc-hero-title {
-    color: #F4F2FF;
+    color: #F4F2FF !important;
 }
 
 [data-theme="dark"] .sc-hero p,
 [data-theme="dark"] .sc-hero .sc-hero-sub,
 [data-theme="dark"] .sc-hero .sc-hero-trust {
-    color: #A9A2C9;
+    color: #A9A2C9 !important;
 }
 
 [data-theme="dark"] .sc-hero .sc-hero-trust strong {
-    color: #F4F2FF;
+    color: #F4F2FF !important;
 }
 
 [data-theme="dark"] .sc-hero .sc-hero-ghost {
