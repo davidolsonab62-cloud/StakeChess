@@ -2,10 +2,6 @@ import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "@/App";
 import { useTheme } from "@/context/ThemeContext";
 
-// Collapsed sidebar shows just the king icon (cropped from the full
-// lockup); expanded sidebar shows the full "StakeChess" wordmark image.
-// Swapping the source files at these two paths updates the brand
-// everywhere without touching this component again.
 const ICON_LOGO_URL = "/stakechess-icon.png";
 const FULL_LOGO_URL = "/stakechess-logo.png";
 
@@ -15,27 +11,15 @@ const BrandMark = ({ collapsed }) => {
       <img
         src={ICON_LOGO_URL}
         alt="StakeChess"
-        style={{
-          height: 30,
-          width: 30,
-          objectFit: "contain",
-          flexShrink: 0,
-        }}
+        style={{ height: 30, width: 30, objectFit: "contain", flexShrink: 0 }}
       />
     );
   }
-
   return (
     <img
       src={FULL_LOGO_URL}
       alt="StakeChess"
-      style={{
-        height: 26,
-        width: "auto",
-        maxWidth: 168,
-        objectFit: "contain",
-        flexShrink: 0,
-      }}
+      style={{ height: 26, width: "auto", maxWidth: 168, objectFit: "contain", flexShrink: 0 }}
     />
   );
 };
@@ -62,10 +46,6 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
   const { theme, toggleTheme } = useTheme();
   const isAdmin = user?.role === "admin" || user?.is_admin;
   const isDark = theme === "dark";
-
-  // The collapse-to-icons feature only makes sense for the persistent desktop
-  // rail. The mobile drawer is a transient overlay, so it always renders
-  // expanded (full labels) regardless of the saved desktop preference.
   const compact = collapsed && !mobileOpen;
 
   const rowBase =
@@ -73,10 +53,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
 
   return (
     <>
-      {/* Backdrop: only present (and only needed) while the mobile drawer is open */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 md:hidden"
+          className="fixed inset-0 z-40 lg:hidden"
           style={{ background: "rgba(0, 0, 0, 0.5)" }}
           onClick={onMobileClose}
           aria-hidden="true"
@@ -84,7 +63,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
       )}
 
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 flex flex-col shrink-0 sc-sidebar transition-transform duration-200 ease-out md:translate-x-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 flex flex-col shrink-0 sc-sidebar transition-transform duration-200 ease-out lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{
@@ -95,7 +74,6 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
           boxShadow: mobileOpen ? "var(--shadow-md, 0 8px 24px rgba(0,0,0,0.25))" : undefined,
         }}
       >
-        {/* Brand + collapse control (desktop) / close control (mobile) */}
         <div className={`flex items-center ${compact ? "justify-center" : "gap-2 px-1"} pb-5`}>
           <Link
             to="/"
@@ -112,7 +90,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
               onClick={onToggle}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
-              className="ml-auto hidden md:flex h-7 w-7 items-center justify-center rounded-lg sc-icon-btn"
+              className="ml-auto hidden lg:flex h-7 w-7 items-center justify-center rounded-lg sc-icon-btn"
               style={{ color: "var(--text-secondary)" }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -125,7 +103,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
             onClick={onMobileClose}
             aria-label="Close menu"
             title="Close menu"
-            className="ml-auto flex md:hidden h-10 w-10 items-center justify-center rounded-lg sc-icon-btn"
+            className="ml-auto flex lg:hidden h-10 w-10 items-center justify-center rounded-lg sc-icon-btn"
             style={{ color: "var(--text-secondary)" }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -140,7 +118,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
             onClick={onToggle}
             aria-label="Expand sidebar"
             title="Expand sidebar"
-            className="mb-3 hidden md:flex h-9 w-full items-center justify-center rounded-lg sc-icon-btn"
+            className="mb-3 hidden lg:flex h-9 w-full items-center justify-center rounded-lg sc-icon-btn"
             style={{ color: "var(--text-secondary)" }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -209,7 +187,6 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
 
       <div className="flex-1" />
 
-      {/* Theme toggle now lives here instead of in a topbar strip */}
       <button
         onClick={toggleTheme}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
@@ -287,10 +264,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
         </div>
       )}
 
-      {/* About section */}
-      <div
-        style={{ borderTop: "1px solid var(--hairline)", marginTop: 12, paddingTop: 12 }}
-      >
+      <div style={{ borderTop: "1px solid var(--hairline)", marginTop: 12, paddingTop: 12 }}>
         {!compact && (
           <div className="mb-3 px-1">
             <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
@@ -299,53 +273,23 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
           </div>
         )}
         <nav className="flex flex-col gap-0.5">
-          <Link
-            to="/wallet"
-            title={compact ? "Subscribe" : undefined}
-            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
-            style={{ color: "var(--text-secondary)" }}
-            onClick={onMobileClose}
-          >
+          <Link to="/wallet" title={compact ? "Subscribe" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
             <i className="w-[18px] text-center not-italic shrink-0">💎</i>
             {!compact && "Subscribe"}
           </Link>
-          <Link
-            to="/support"
-            title={compact ? "Support" : undefined}
-            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
-            style={{ color: "var(--text-secondary)" }}
-            onClick={onMobileClose}
-          >
+          <Link to="/support" title={compact ? "Support" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
             <i className="w-[18px] text-center not-italic shrink-0">💬</i>
             {!compact && "Support"}
           </Link>
-          <Link
-            to="/privacy"
-            title={compact ? "Privacy" : undefined}
-            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
-            style={{ color: "var(--text-secondary)" }}
-            onClick={onMobileClose}
-          >
+          <Link to="/privacy" title={compact ? "Privacy" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
             <i className="w-[18px] text-center not-italic shrink-0">🔒</i>
             {!compact && "Privacy"}
           </Link>
-          <Link
-            to="/terms"
-            title={compact ? "Terms" : undefined}
-            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
-            style={{ color: "var(--text-secondary)" }}
-            onClick={onMobileClose}
-          >
+          <Link to="/terms" title={compact ? "Terms" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
             <i className="w-[18px] text-center not-italic shrink-0">📋</i>
             {!compact && "Terms"}
           </Link>
-          <Link
-            to="/database"
-            title={compact ? "Database" : undefined}
-            className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`}
-            style={{ color: "var(--text-secondary)" }}
-            onClick={onMobileClose}
-          >
+          <Link to="/database" title={compact ? "Database" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
             <i className="w-[18px] text-center not-italic shrink-0">📊</i>
             {!compact && "Database"}
           </Link>
