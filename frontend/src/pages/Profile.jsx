@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { Trophy, Target, Clock, TrendingUp, TrendingDown, Camera, Trash2, Share2, Copy, Check } from "lucide-react";
 import { SkeletonHeaderCard, SkeletonStatsRow, SkeletonPanel } from "@/components/ui/skeletons";
+import BackButton from "@/components/layout/BackButton";
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB
 const USERNAME_PATTERN = /^[A-Za-z0-9_]+$/;
@@ -339,6 +340,10 @@ export default function Profile() {
 
   return (
     <div className="sc-page max-w-4xl mx-auto">
+      <div className="mb-4">
+        <BackButton />
+      </div>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row items-center gap-6 rounded-2xl p-8 mb-5" style={cardStyle}>
         <div className="relative shrink-0">

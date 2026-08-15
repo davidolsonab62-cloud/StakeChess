@@ -47,6 +47,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { SkeletonStatsRow, SkeletonPanel } from "@/components/ui/skeletons";
+import PageHeader from "@/components/layout/PageHeader";
 
 
 export default function AdminPanel() {
@@ -300,9 +301,9 @@ export default function AdminPanel() {
 
   return (
     <div className="sc-page max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[22px] font-bold flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+      <PageHeader
+        title={
+          <>
             Admin panel
             <span
               className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-md"
@@ -310,12 +311,10 @@ export default function AdminPanel() {
             >
               Admin
             </span>
-          </h1>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-secondary)" }}>
-            Platform stats, users, and moderation
-          </p>
-        </div>
-      </div>
+          </>
+        }
+        subtitle="Platform stats, users, and moderation"
+      />
 
       <div className="max-w-7xl mx-auto">
         {/* Tabs */}

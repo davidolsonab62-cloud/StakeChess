@@ -8,6 +8,7 @@ import axios from "axios";
 import io from "socket.io-client";
 import { toast } from "sonner";
 import { Clock, ChevronRight, ShieldOff, RefreshCw } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default function Live() {
   const { user, token } = useAuth();
@@ -82,15 +83,11 @@ export default function Live() {
   return (
     <div className="min-h-screen p-6 bg-surface-1">
       <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Watch Live Matches</h1>
-            <p className="text-sm text-ink-secondary">Spectate active public games and join the commentary flow.</p>
-          </div>
+        <PageHeader title="Watch Live Matches" subtitle="Spectate active public games and join the commentary flow.">
           <Button size="sm" variant="outline" onClick={fetchLiveGames} className="font-semibold">
             <RefreshCw className="w-4 h-4 mr-2" /> Refresh
           </Button>
-        </div>
+        </PageHeader>
 
         {loading ? (
           <div className="rounded-3xl border border-hair bg-surface-2 p-8 text-center text-ink-secondary">Loading live games…</div>

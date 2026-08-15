@@ -6,6 +6,7 @@ import { API, useAuth } from "@/App";
 import axios from "axios";
 import { toast } from "sonner";
 import { ShieldCheck, X, Clock, User } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default function ChallengeQueue() {
   const { token } = useAuth();
@@ -64,19 +65,11 @@ export default function ChallengeQueue() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex flex-col gap-2 mb-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Challenge Queue
-            </h1>
-            <p className="text-ink-secondary">Accept or reject pending match requests from other players.</p>
-          </div>
-          <Button size="sm" variant="outline" onClick={fetchChallenges}>
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <PageHeader title="Challenge Queue" subtitle="Accept or reject pending match requests from other players.">
+        <Button size="sm" variant="outline" onClick={fetchChallenges}>
+          Refresh
+        </Button>
+      </PageHeader>
 
       <div className="rounded-2xl border border-hair bg-surface-1 overflow-hidden">
         {loading ? (

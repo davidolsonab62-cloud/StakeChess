@@ -7,6 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { MessageSquare, Mail } from "lucide-react";
 import { SkeletonListRow } from "@/components/ui/skeletons";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default function Messages() {
   const { user } = useAuth();
@@ -101,9 +102,7 @@ export default function Messages() {
 
   return (
     <div className="sc-page max-w-6xl mx-auto">
-      <h1 className="text-[22px] font-bold mb-6" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-        Messages
-      </h1>
+      <PageHeader title="Messages" />
 
       <div className="grid grid-cols-12 gap-5">
         {/* Conversation list */}

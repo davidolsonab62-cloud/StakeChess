@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import studies from "@/utils/studies";
 import { Link } from "react-router-dom";
+import PageHeader from "@/components/layout/PageHeader";
 
 function getYoutubeId(url) {
   if (!url) return null;
@@ -62,12 +63,7 @@ export default function Study() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-heading">Study</h1>
-          <p className="text-sm text-ink-secondary">Learn openings, middlegame plans and endgame fundamentals.</p>
-        </div>
-      </div>
+      <PageHeader title="Study" subtitle="Learn openings, middlegame plans and endgame fundamentals." />
 
       <div className="mb-4">
         <input

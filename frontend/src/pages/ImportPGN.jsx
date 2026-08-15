@@ -22,6 +22,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
 
 const DEFAULT_PGN_PLACEHOLDER = `[Event "My Game"]\n[White "Alice"]\n[Black "Bob"]\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6...`;
 
@@ -290,20 +291,10 @@ export default function ImportPGN() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/lobby")}
-              className="inline-flex items-center gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" /> Back to dashboard
-            </Button>
-            <h1 className="text-2xl font-bold">Import PGN</h1>
-          </div>
-          <p className="text-sm text-text-secondary max-w-2xl">
-            Paste a PGN from your game or opening study to replay every move, analyze positions, chat with your session, and generate a shareable link.
-          </p>
+          <PageHeader
+            title="Import PGN"
+            subtitle="Paste a PGN from your game or opening study to replay every move, analyze positions, chat with your session, and generate a shareable link."
+          />
         </div>
         {parsed && (
           <div className="flex flex-wrap gap-2">

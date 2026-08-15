@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Chessboard, defaultPieces } from "react-chessboard";
 import { Chess } from "chess.js";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { resolveBoardPrefs } from "@/utils/boardPrefs";
 import { toast } from "sonner";
 import axios from "axios";
 import { Copy, RotateCcw, Zap, Layers } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
 
 const INITIAL_FEN = new Chess().fen();
 const PIECE_PALETTE = [
@@ -74,7 +74,6 @@ function countPiecesFromFen(fen) {
 }
 
 export default function BoardEditor() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { boardSquareColors, theme: boardThemeName, color: boardColorName } = resolveBoardPrefs(user);
   const chessRef = useRef(buildChess());
@@ -473,18 +472,8 @@ export default function BoardEditor() {
   return (
     <div className="sc-page max-w-6xl mx-auto">
       <div className="flex flex-col gap-4 mb-6">
-        <div>
-          <h1 className="text-[22px] font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "var(--text-primary)" }}>
-            Board editor
-          </h1>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-secondary)" }}>
-            Rearrange pieces, create a custom position, and analyze it with Stockfish.
-          </p>
-        </div>
+        <PageHeader title="Board editor" subtitle="Rearrange pieces, create a custom position, and analyze it with Stockfish." />
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => navigate("/lobby")} className="font-semibold">
-            Back to dashboard
-          </Button>
           <Button variant="outline" onClick={handleResetBoard} className="font-semibold">
             Reset board
           </Button>

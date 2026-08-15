@@ -1,6 +1,7 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import studies from "@/utils/studies";
+import BackButton from "@/components/layout/BackButton";
 
 function toEmbedUrl(url) {
   if (!url) return null;
@@ -62,6 +63,9 @@ export default function StudyDetail() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <div className="mb-2">
+        <BackButton />
+      </div>
       <div className="mb-4">
         <h1 className="text-2xl font-heading">{study.title}</h1>
         <div className="text-sm text-ink-secondary">{study.category}</div>

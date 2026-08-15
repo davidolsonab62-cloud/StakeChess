@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import PageHeader from "@/components/layout/PageHeader";
 
 const POSTS = [
   {
@@ -24,12 +25,7 @@ const POSTS = [
 export default function News() {
   return (
     <div className="sc-page max-w-3xl mx-auto">
-      <div className="mb-7">
-        <h1 className="font-display font-bold text-[22px]">News</h1>
-        <p className="text-[13px] mt-1" style={{ color: "var(--text-secondary)" }}>
-          Latest announcements and platform updates
-        </p>
-      </div>
+      <PageHeader title="News" subtitle="Latest announcements and platform updates" />
 
       <div className="sc-stagger flex flex-col gap-4">
         {POSTS.map((post) => (

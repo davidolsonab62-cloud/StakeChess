@@ -9,6 +9,7 @@ import { useAuth, API } from "@/App";
 import { resolveBoardPrefs } from "@/utils/boardPrefs";
 import { toast } from "sonner";
 import axios from "axios";
+import BackButton from "@/components/layout/BackButton";
 import {
   ChevronLeft,
   Trophy,
@@ -613,6 +614,9 @@ export default function PlayComputer() {
     return (
       <div>
         <div className="max-w-2xl mx-auto">
+        <div className="mb-2">
+          <BackButton />
+        </div>
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Cpu className="w-12 h-12" style={{ color: "var(--brand)" }} />

@@ -37,6 +37,7 @@ import {
   Check,
 } from "lucide-react";
 import { SkeletonStatsRow, SkeletonPanel } from "@/components/ui/skeletons";
+import PageHeader from "@/components/layout/PageHeader";
 
 const TIME_CONTROLS = [
   { value: "1+0", label: "1 min", type: "bullet" },
@@ -329,18 +330,7 @@ export default function Lobby() {
     <div className="sc-page max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1
-            className="text-[22px] font-bold"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", color: "var(--text-primary)" }}
-            data-testid="lobby-title"
-          >
-            Game lobby
-          </h1>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-secondary)" }}>
-            Find an opponent or create a new game
-          </p>
-        </div>
+        <PageHeader title="Game lobby" subtitle="Find an opponent or create a new game" testId="lobby-title" />
 
         <div className="flex gap-2.5 flex-wrap">
           <Button

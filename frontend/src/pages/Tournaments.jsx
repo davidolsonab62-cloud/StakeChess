@@ -12,6 +12,7 @@ import { useAuth, API } from "@/App";
 import { toast } from "sonner";
 import axios from "axios";
 import io from "socket.io-client";
+import BackButton from "@/components/layout/BackButton";
 import {
   Trophy,
   Users,
@@ -316,6 +317,9 @@ export default function Tournaments() {
   return (
     <div>
       <div className="max-w-6xl mx-auto">
+        <div className="mb-2">
+          <BackButton />
+        </div>
         <div className="text-center mb-8">
           <h1
             className="text-3xl font-bold mb-2"

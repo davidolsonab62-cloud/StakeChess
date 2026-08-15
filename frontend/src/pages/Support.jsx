@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Mail, User, MessageSquareText } from "lucide-react";
+import { Mail, User, MessageSquareText } from "lucide-react";
 import { useAuth } from "@/App";
+import BackButton from "@/components/layout/BackButton";
 
 const SUPPORT_EMAIL = "stakechesssupport@gmail.com";
 
 export default function Support() {
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [form, setForm] = useState({
@@ -39,77 +38,31 @@ export default function Support() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--surface-0)", color: "var(--text-primary)" }}>
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          style={{ color: "var(--text-secondary)" }}
-        >
-          <ChevronLeft className="w-4 h-4 mr-2" /> Back
-        </Button>
+    <div className="max-w-3xl mx-auto px-6 py-12">
+      <BackButton />
 
-        <div className="mt-8 rounded-2xl border border-hair bg-surface-1 p-6 md:p-8 shadow-sm">
-          <div className="mb-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] mb-3" style={{ color: "var(--brand)" }}>
-              Customer Support
-            </p>
-            <h1 className="text-3xl md:text-4xl font-bold">How can we help?</h1>
-            <p className="mt-3 text-base" style={{ color: "var(--text-secondary)" }}>
-              Introduce yourself, describe the issue, and send your message directly to our support team.
-            </p>
-          </div>
+      <div className="mt-8 rounded-2xl border border-hair bg-surface-1 p-6 md:p-8 shadow-sm">
+        <div className="mb-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] mb-3" style={{ color: "var(--brand)" }}>
+            Customer Support
+          </p>
+          <h1 className="text-3xl md:text-4xl font-bold">How can we help?</h1>
+          <p className="mt-3 text-base" style={{ color: "var(--text-secondary)" }}>
+            Introduce yourself, describe the issue, and send your message directly to our support team.
+          </p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-5 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 flex items-center gap-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-                  <User className="w-4 h-4" /> Your name
-                </span>
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="Your name"
-                  className="w-full rounded-xl border px-3 py-2.5 outline-none transition focus:ring-2"
-                  style={{
-                    background: "var(--surface-2)",
-                    borderColor: "var(--hairline)",
-                    color: "var(--text-primary)",
-                  }}
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 flex items-center gap-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-                  <Mail className="w-4 h-4" /> Email address
-                </span>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="you@example.com"
-                  className="w-full rounded-xl border px-3 py-2.5 outline-none transition focus:ring-2"
-                  style={{
-                    background: "var(--surface-2)",
-                    borderColor: "var(--hairline)",
-                    color: "var(--text-primary)",
-                  }}
-                  required
-                />
-              </label>
-            </div>
-
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid gap-5 md:grid-cols-2">
             <label className="block">
               <span className="mb-2 flex items-center gap-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-                <MessageSquareText className="w-4 h-4" /> Subject
+                <User className="w-4 h-4" /> Your name
               </span>
               <input
-                name="subject"
-                value={form.subject}
+                name="name"
+                value={form.name}
                 onChange={handleChange}
-                placeholder="Brief summary of your issue"
+                placeholder="Your name"
                 className="w-full rounded-xl border px-3 py-2.5 outline-none transition focus:ring-2"
                 style={{
                   background: "var(--surface-2)",
@@ -120,15 +73,15 @@ export default function Support() {
             </label>
 
             <label className="block">
-              <span className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-                Describe your problem
+              <span className="mb-2 flex items-center gap-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+                <Mail className="w-4 h-4" /> Email address
               </span>
-              <textarea
-                name="message"
-                value={form.message}
+              <input
+                type="email"
+                name="email"
+                value={form.email}
                 onChange={handleChange}
-                rows={8}
-                placeholder="Tell us what happened, when it started, and any error messages you saw..."
+                placeholder="you@example.com"
                 className="w-full rounded-xl border px-3 py-2.5 outline-none transition focus:ring-2"
                 style={{
                   background: "var(--surface-2)",
@@ -138,24 +91,63 @@ export default function Support() {
                 required
               />
             </label>
+          </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                Sending to: <span className="font-medium" style={{ color: "var(--text-primary)" }}>{SUPPORT_EMAIL}</span>
-              </div>
-              <Button type="submit" className="px-6">
-                Send to Support
-              </Button>
-            </div>
-          </form>
+          <label className="block">
+            <span className="mb-2 flex items-center gap-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+              <MessageSquareText className="w-4 h-4" /> Subject
+            </span>
+            <input
+              name="subject"
+              value={form.subject}
+              onChange={handleChange}
+              placeholder="Brief summary of your issue"
+              className="w-full rounded-xl border px-3 py-2.5 outline-none transition focus:ring-2"
+              style={{
+                background: "var(--surface-2)",
+                borderColor: "var(--hairline)",
+                color: "var(--text-primary)",
+              }}
+            />
+          </label>
 
-          {sent && (
-            <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
-              Your email app should open with a pre-filled support message. If it does not, email us directly at {SUPPORT_EMAIL}.
+          <label className="block">
+            <span className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+              Describe your problem
+            </span>
+            <textarea
+              name="message"
+              value={form.message}
+              onChange={handleChange}
+              rows={8}
+              placeholder="Tell us what happened, when it started, and any error messages you saw..."
+              className="w-full rounded-xl border px-3 py-2.5 outline-none transition focus:ring-2"
+              style={{
+                background: "var(--surface-2)",
+                borderColor: "var(--hairline)",
+                color: "var(--text-primary)",
+              }}
+              required
+            />
+          </label>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              Sending to: <span className="font-medium" style={{ color: "var(--text-primary)" }}>{SUPPORT_EMAIL}</span>
             </div>
-          )}
-        </div>
+            <Button type="submit" className="px-6">
+              Send to Support
+            </Button>
+          </div>
+        </form>
+
+        {sent && (
+          <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
+            Your email app should open with a pre-filled support message. If it does not, email us directly at {SUPPORT_EMAIL}.
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

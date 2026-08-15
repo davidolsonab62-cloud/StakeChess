@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/App";
 import { ArrowLeft, Clock, Pause, Play, RotateCcw } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
 
 const DEFAULT_MINUTES = 5;
 
@@ -95,16 +96,7 @@ export default function ChessClock() {
 
   return (
     <div className="sc-page max-w-4xl mx-auto">
-      <div className="flex flex-col gap-4 mb-6">
-        <div>
-          <h1 className="text-[22px] font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "var(--text-primary)" }}>
-            Chess clock
-          </h1>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-secondary)" }}>
-            Tap your time to switch the active side. Reset and start/pause from here.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Chess clock" subtitle="Tap your time to switch the active side. Reset and start/pause from here." />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(320px,420px)_1fr]">
         <div className="rounded-2xl border border-hair bg-surface-1 p-4 shadow-sm">

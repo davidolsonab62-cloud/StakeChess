@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { toast } from "sonner";
-import { ChevronLeft, RefreshCw, Lightbulb, Sparkles } from "lucide-react";
+import { RefreshCw, Lightbulb, Sparkles } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default function Puzzles() {
   const { user, token, loading: authLoading } = useAuth();
@@ -266,19 +267,10 @@ export default function Puzzles() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-6">
           <div>
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              style={{ color: "var(--text-secondary)" }}
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" /> Back
-            </Button>
-            <h1 className="font-heading text-3xl mt-4" style={{ color: "var(--text-primary)" }}>
-              Puzzle Training
-            </h1>
-            <p className="max-w-2xl mt-2" style={{ color: "var(--text-secondary)" }}>
-              Solve tactical positions, earn rating, and progress through harder puzzles.
-            </p>
+            <PageHeader
+              title="Puzzle Training"
+              subtitle="Solve tactical positions, earn rating, and progress through harder puzzles."
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

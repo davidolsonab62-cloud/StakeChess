@@ -8,6 +8,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Trophy, Medal, Target, Crown, MessageCircle, ShieldCheck, X } from "lucide-react";
 import { SkeletonPanel } from "@/components/ui/skeletons";
+import BackButton from "@/components/layout/BackButton";
 
 export default function Leaderboard() {
   const { user, token } = useAuth();
@@ -83,6 +84,9 @@ export default function Leaderboard() {
   return (
     <div>
       <div className="max-w-4xl mx-auto">
+        <div className="mb-2">
+          <BackButton />
+        </div>
         <div className="text-center mb-8">
           <h1
             className="text-3xl font-bold mb-2"

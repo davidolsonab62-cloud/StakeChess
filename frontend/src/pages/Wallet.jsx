@@ -31,6 +31,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { SkeletonPanel } from "@/components/ui/skeletons";
+import PageHeader from "@/components/layout/PageHeader";
 
 const CURRENCIES = [
   { value: "USDT", symbol: "$", tone: "var(--green)", network: "TRC20 (Tron Network)" },
@@ -163,12 +164,7 @@ export default function Wallet() {
 
   return (
     <div className="sc-page max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-[22px] font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }} data-testid="wallet-title">
-          Wallet
-        </h1>
-        <p className="text-[13px] mt-1" style={{ color: "var(--text-secondary)" }}>Manage your crypto balance</p>
-      </div>
+      <PageHeader title="Wallet" subtitle="Manage your crypto balance" testId="wallet-title" />
 
       {/* Balance cards */}
       <div className="grid md:grid-cols-3 gap-3.5 mb-6">
