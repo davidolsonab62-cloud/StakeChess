@@ -3317,17 +3317,31 @@ async def get_computer_move(move_req: ComputerMoveRequest):
     try:
         stockfish = Stockfish(path=STOCKFISH_PATH, depth=move_req.depth, parameters={"Threads": 2, "Hash": 128})
         stockfish.set_fen_position(move_req.fen)
-        
+
+        # Elo-targeted strength instead of the classic 0-20 Skill Level.
+        # Skill Level injects blunders into the search in a way that plays
+        # noticeably weaker/more erratic than its number suggests at the
+        # lower end; UCI_LimitStrength + UCI_Elo asks the engine to aim
+        # for an actual rating, which tracks the frontend's advertised
+        # ELO per difficulty much more closely.
         if move_req.depth <= 3:
-            stockfish.set_skill_level(1)
+            target_elo = 800
         elif move_req.depth <= 6:
-            stockfish.set_skill_level(4)
+            target_elo = 1200
         elif move_req.depth <= 10:
-            stockfish.set_skill_level(8)
-        elif move_req.depth <= 15:
-            stockfish.set_skill_level(14)
+            target_elo = 1600
+        elif move_req.depth < 15:
+            target_elo = 2000
         else:
-            stockfish.set_skill_level(20)
+            target_elo = None  # Master: full strength, no cap
+
+        if target_elo is not None:
+            stockfish.update_engine_parameters({
+                "UCI_LimitStrength": "true",
+                "UCI_Elo": target_elo,
+            })
+        else:
+            stockfish.update_engine_parameters({"UCI_LimitStrength": "false"})
 
         best_move = stockfish.get_best_move()
         evaluation = stockfish.get_evaluation() or {}
@@ -3347,7 +3361,7 @@ async def get_computer_move(move_req: ComputerMoveRequest):
             "top_moves": top_moves,
             "book_moves": book_moves,
             "depth": move_req.depth,
-            "skill_level": getattr(stockfish, "get_skill_level", lambda: None)()
+            "target_elo": target_elo,  # None means full strength (Master)
         }
     except Exception as e:
         logger.error(f"Stockfish error: {e}")
