@@ -275,6 +275,10 @@ class GameResponse(BaseModel):
     game_type: str = "rapid"
     tournament_id: Optional[str] = None
 
+class MatchmakingRequest(BaseModel):
+    time_control: str = "10+0"
+    game_type: str = "rapid"
+
 class MoveRequest(BaseModel):
     game_id: str
     move: str
@@ -2038,6 +2042,125 @@ async def join_game(game_id: str, request: Request):
         return GameResponse(**game)
 
     raise HTTPException(status_code=400, detail="Game is not available to join")
+
+# ============= MATCHMAKING (Play Active Users) =============
+# Reuses the existing "waiting" game mechanism: a search either joins someone
+# else's open matchmaking game (via _activate_waiting_game, same path as a
+# manual /games/{id}/join) or - if nobody compatible is waiting - creates one
+# and returns it, so the caller is redirected into /game/{game_id} exactly
+# like a normal created game while another player's search finds it.
+MATCHMAKING_QUEUE_MAX_AGE_MINUTES = 10
+
+@api_router.post("/matchmaking/find", response_model=GameResponse)
+async def find_match(request: Request, match_data: MatchmakingRequest = MatchmakingRequest()):
+    user = await get_current_user(request)
+    my_rating = user.get("rating", 1200)
+    my_prefs = user.get("challenge_preferences") or {}
+    my_allow_any = bool(my_prefs.get("allow_any_rating", True))
+    my_min = my_prefs.get("min_challenge_rating")
+    my_max = my_prefs.get("max_challenge_rating")
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=MATCHMAKING_QUEUE_MAX_AGE_MINUTES)).isoformat()
+
+    candidates = await db.games.find(
+        {
+            "status": "waiting",
+            "matchmaking": True,
+            "white_player.user_id": {"$ne": user["user_id"]},
+            "created_at": {"$gte": cutoff},
+        },
+        {"_id": 0},
+    ).sort("created_at", 1).to_list(50)
+
+    for game in candidates:
+        opponent = game.get("white_player") or {}
+        opp_rating = opponent.get("rating", 1200)
+        opp_allow_any = bool(game.get("matchmaking_allow_any", True))
+        opp_min = game.get("matchmaking_min_rating")
+        opp_max = game.get("matchmaking_max_rating")
+
+        # The waiting player must be willing to accept my rating...
+        if not opp_allow_any:
+            if opp_min is not None and my_rating < int(opp_min):
+                continue
+            if opp_max is not None and my_rating > int(opp_max):
+                continue
+        # ...and I must be willing to accept theirs.
+        if not my_allow_any:
+            if my_min is not None and opp_rating < int(my_min):
+                continue
+            if my_max is not None and opp_rating > int(my_max):
+                continue
+
+        try:
+            activated_game = await _activate_waiting_game(game["game_id"], user)
+        except HTTPException:
+            # Someone else grabbed it (or it became unavailable) between the
+            # query and now - try the next candidate instead of failing out.
+            continue
+        return GameResponse(**activated_game)
+
+    # No compatible opponent waiting right now: open a new matchmaking slot
+    # using this player's own rating preferences, and return it so the
+    # frontend can navigate straight into the game room to wait there.
+    parts = match_data.time_control.split("+")
+    base_time = int(parts[0]) * 60
+    game_id = f"game_{uuid.uuid4().hex[:12]}"
+    game_doc = {
+        "game_id": game_id,
+        "white_player": {
+            "user_id": user["user_id"],
+            "username": user["username"],
+            "rating": my_rating,
+            "allow_spectators": user.get("allow_spectators", True),
+            "allow_chat_broadcast": user.get("allow_chat_broadcast", True),
+        },
+        "black_player": None,
+        "time_control": match_data.time_control,
+        "stake_amount": 0,
+        "stake_currency": "USDT",
+        "arbiter_fee": 0.02,
+        "status": "waiting",
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "moves": [],
+        "move_times": [],
+        "white_time": base_time,
+        "black_time": base_time,
+        "current_turn": "white",
+        "result": None,
+        "winner_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "is_private": False,
+        "game_type": match_data.game_type,
+        "tournament_id": None,
+        "matchmaking": True,
+        "matchmaking_allow_any": my_allow_any,
+        "matchmaking_min_rating": None if my_allow_any else my_min,
+        "matchmaking_max_rating": None if my_allow_any else my_max,
+    }
+
+    await db.games.insert_one(game_doc)
+    game_doc.pop("_id", None)
+
+    await sio.emit("game_created", game_doc)
+    await emit_watchable_count_update()
+
+    return GameResponse(**game_doc)
+
+@api_router.post("/matchmaking/cancel")
+async def cancel_matchmaking(request: Request):
+    """Withdraw the caller's own open matchmaking game, if it's still
+    unmatched. No-ops (rather than erroring) if it already got matched or
+    there wasn't one, since the frontend calls this defensively."""
+    user = await get_current_user(request)
+    result = await db.games.delete_one(
+        {
+            "white_player.user_id": user["user_id"],
+            "status": "waiting",
+            "matchmaking": True,
+        }
+    )
+    return {"cancelled": result.deleted_count > 0}
 
 # NOTE: Keep this static route before /games/{game_id} to avoid the dynamic
 # game_id route capturing the literal "watchable-count" path.

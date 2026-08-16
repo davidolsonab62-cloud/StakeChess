@@ -31,13 +31,14 @@ import {
   Timer,
   RefreshCw,
   Calendar,
-  Cpu,
   Share2,
   Copy,
   Check,
+  Play,
 } from "lucide-react";
 import { SkeletonStatsRow, SkeletonPanel } from "@/components/ui/skeletons";
 import PageHeader from "@/components/layout/PageHeader";
+import PlayMenuDialog from "@/components/play/PlayMenuDialog";
 
 const TIME_CONTROLS = [
   { value: "1+0", label: "1 min", type: "bullet" },
@@ -69,6 +70,7 @@ export default function Lobby() {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [playDialogOpen, setPlayDialogOpen] = useState(false);
   const [joiningGame, setJoiningGame] = useState(null);
   const [currentGameId, setCurrentGameId] = useState(null);
   const [currentGameExpiry, setCurrentGameExpiry] = useState(null);
@@ -350,15 +352,20 @@ export default function Lobby() {
             Board editor
           </Button>
           <Button
-            variant="outline"
-            onClick={() => navigate("/play-computer")}
-            className="border font-semibold"
-            style={{ background: "var(--surface-1)", borderColor: "var(--hairline)", color: "var(--text-primary)" }}
-            data-testid="play-computer-btn"
+            className="font-semibold"
+            style={{ background: "var(--brand)", color: "var(--on-brand)" }}
+            onClick={() => setPlayDialogOpen(true)}
+            data-testid="play-btn"
           >
-            <Cpu className="w-4 h-4 mr-2" />
-            Play vs computer
+            <Play className="w-4 h-4 mr-2" />
+            Play
           </Button>
+          <PlayMenuDialog
+            open={playDialogOpen}
+            onOpenChange={setPlayDialogOpen}
+            timeControl={timeControl}
+            gameType={gameType}
+          />
           <Button
             variant="outline"
             onClick={() => navigate("/tournaments")}

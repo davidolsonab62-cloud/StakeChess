@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/App";
+import PlayMenuDialog from "@/components/play/PlayMenuDialog";
 
 const ICON_LOGO_URL = "/stakechess-icon.png";
 const FULL_LOGO_URL = "/stakechess-logo.png";
@@ -26,7 +27,7 @@ const BrandMark = ({ collapsed }) => {
 
 const NAV_ITEMS = [
   { to: "/lobby", label: "Home", icon: "▣" },
-  { to: "/play-computer", label: "Play", icon: "♟" },
+  { to: "/play-computer", label: "Play", icon: "♟", isPlayMenu: true },
   { to: "/import-pgn", label: "Import PGN", icon: "⎘" },
   { to: "/board-editor", label: "Board Editor", icon: "⌘" },
   { to: "/chess-clock", label: "Chess Clock", icon: "⏱" },
@@ -45,11 +46,14 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
   const isAdmin = user?.role === "admin" || user?.is_admin;
   const compact = collapsed && !mobileOpen;
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [playDialogOpen, setPlayDialogOpen] = useState(false);
+  const location = useLocation();
 
   const rowBase =
     "flex items-center gap-3 rounded-[9px] px-3 py-2.5 text-[14px] font-medium no-underline transition-colors sc-nav-row";
 
   return (
+    <>
     <aside
         // sc-no-reveal: opts this element out of useScrollReveal's
         // auto-attach (it matches any direct child of a ".min-h-screen"
@@ -127,7 +131,28 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
         )}
 
         <nav className="flex flex-col gap-0.5 overflow-y-auto">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map((item) => {
+          if (item.isPlayMenu) {
+            const isActive = location.pathname === item.to;
+            return (
+              <button
+                key={item.to}
+                type="button"
+                title={compact ? item.label : undefined}
+                onClick={() => setPlayDialogOpen(true)}
+                className={`${rowBase} ${compact ? "justify-center px-0" : ""}`}
+                style={{
+                  background: isActive ? "var(--brand-dim)" : "transparent",
+                  color: isActive ? "var(--brand)" : "var(--text-secondary)",
+                }}
+              >
+                <i className="w-[18px] text-center not-italic shrink-0">{item.icon}</i>
+                {!compact && item.label}
+              </button>
+            );
+          }
+
+          return (
           <NavLink
             key={item.to}
             to={item.to}
@@ -165,7 +190,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
               )}
             </div>
           </NavLink>
-        ))}
+          );
+        })}
         {isAdmin && (
           <NavLink
             to="/admin"
@@ -310,5 +336,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
         )}
       </div>
       </aside>
+      <PlayMenuDialog open={playDialogOpen} onOpenChange={setPlayDialogOpen} />
+    </>
   );
 }
