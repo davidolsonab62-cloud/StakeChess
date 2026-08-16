@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "@/App";
 import { useTheme } from "@/context/ThemeContext";
@@ -38,7 +39,6 @@ const NAV_ITEMS = [
   { to: "/challenge-queue", label: "Challenges", icon: "⚔" },
   { to: "/messages", label: "Messages", icon: "✉" },
   { to: "/wallet", label: "Wallet", icon: "⬒" },
-  { to: "/profile", label: "Profile", icon: "◐" },
 ];
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMobileClose = () => {} }) {
@@ -47,6 +47,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
   const isAdmin = user?.role === "admin" || user?.is_admin;
   const isDark = theme === "dark";
   const compact = collapsed && !mobileOpen;
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const rowBase =
     "flex items-center gap-3 rounded-[9px] px-3 py-2.5 text-[14px] font-medium no-underline transition-colors sc-nav-row";
@@ -265,35 +266,73 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
       )}
 
       <div style={{ borderTop: "1px solid var(--hairline)", marginTop: 12, paddingTop: 12 }}>
-        {!compact && (
-          <div className="mb-3 px-1">
-            <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
-              About StakeChess
-            </div>
-          </div>
+        {compact ? (
+          <nav className="flex flex-col gap-0.5">
+            <Link to="/wallet" title="Subscribe" className={`${rowBase} text-[13px] justify-center px-0`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+              <i className="w-[18px] text-center not-italic shrink-0">💎</i>
+            </Link>
+            <Link to="/support" title="Support" className={`${rowBase} text-[13px] justify-center px-0`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+              <i className="w-[18px] text-center not-italic shrink-0">💬</i>
+            </Link>
+            <Link to="/privacy" title="Privacy" className={`${rowBase} text-[13px] justify-center px-0`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+              <i className="w-[18px] text-center not-italic shrink-0">🔒</i>
+            </Link>
+            <Link to="/terms" title="Terms" className={`${rowBase} text-[13px] justify-center px-0`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+              <i className="w-[18px] text-center not-italic shrink-0">📋</i>
+            </Link>
+            <Link to="/database" title="Database" className={`${rowBase} text-[13px] justify-center px-0`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+              <i className="w-[18px] text-center not-italic shrink-0">📊</i>
+            </Link>
+          </nav>
+        ) : (
+          <>
+            <button
+              onClick={() => setAboutOpen((o) => !o)}
+              aria-expanded={aboutOpen}
+              className="mb-1 px-1 py-1 flex items-center justify-between w-full rounded-lg sc-icon-btn"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-wider">About StakeChess</span>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ transform: aboutOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {aboutOpen && (
+              <nav className="flex flex-col gap-0.5">
+                <Link to="/wallet" className={`${rowBase} text-[13px]`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+                  <i className="w-[18px] text-center not-italic shrink-0">💎</i>
+                  Subscribe
+                </Link>
+                <Link to="/support" className={`${rowBase} text-[13px]`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+                  <i className="w-[18px] text-center not-italic shrink-0">💬</i>
+                  Support
+                </Link>
+                <Link to="/privacy" className={`${rowBase} text-[13px]`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+                  <i className="w-[18px] text-center not-italic shrink-0">🔒</i>
+                  Privacy
+                </Link>
+                <Link to="/terms" className={`${rowBase} text-[13px]`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+                  <i className="w-[18px] text-center not-italic shrink-0">📋</i>
+                  Terms
+                </Link>
+                <Link to="/database" className={`${rowBase} text-[13px]`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+                  <i className="w-[18px] text-center not-italic shrink-0">📊</i>
+                  Database
+                </Link>
+              </nav>
+            )}
+          </>
         )}
-        <nav className="flex flex-col gap-0.5">
-          <Link to="/wallet" title={compact ? "Subscribe" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-            <i className="w-[18px] text-center not-italic shrink-0">💎</i>
-            {!compact && "Subscribe"}
-          </Link>
-          <Link to="/support" title={compact ? "Support" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-            <i className="w-[18px] text-center not-italic shrink-0">💬</i>
-            {!compact && "Support"}
-          </Link>
-          <Link to="/privacy" title={compact ? "Privacy" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-            <i className="w-[18px] text-center not-italic shrink-0">🔒</i>
-            {!compact && "Privacy"}
-          </Link>
-          <Link to="/terms" title={compact ? "Terms" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-            <i className="w-[18px] text-center not-italic shrink-0">📋</i>
-            {!compact && "Terms"}
-          </Link>
-          <Link to="/database" title={compact ? "Database" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-            <i className="w-[18px] text-center not-italic shrink-0">📊</i>
-            {!compact && "Database"}
-          </Link>
-        </nav>
       </div>
       </aside>
   );
