@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { flushSync } from "react-dom";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Chessboard } from "react-chessboard";
@@ -91,6 +91,39 @@ export default function Game() {
   const [isReplayMode, setIsReplayMode] = useState(false);
   const [moveStartTime, setMoveStartTime] = useState(null);
   const [tournamentRedirectSeconds, setTournamentRedirectSeconds] = useState(null);
+
+  // Measured pixel size for the chessboard, replacing the previous
+  // CSS-only sizing (width:100% + aspectRatio + calc(100vw...)), which
+  // react-chessboard's own internal sizing pass wasn't reliably respecting
+  // — the board would render wider than the viewport and get hard-clipped
+  // by `overflow-x: hidden` on <html>. Measuring the real container width
+  // and passing it as an explicit number sidesteps that entirely.
+  const boardContainerRef = useRef(null);
+  const [boardSize, setBoardSize] = useState(360);
+
+  useLayoutEffect(() => {
+    const el = boardContainerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const computeSize = (containerWidth) => {
+      const capped = Math.min(
+        containerWidth,
+        760,
+        window.innerWidth - 40,
+        window.innerHeight - 260
+      );
+      return Math.max(200, Math.floor(capped));
+    };
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect?.width;
+      if (width) setBoardSize(computeSize(width));
+    });
+    observer.observe(el);
+    setBoardSize(computeSize(el.clientWidth));
+
+    return () => observer.disconnect();
+  }, []);
 
   const spectatorChatAllowed =
     playerColor !== "spectator" ||
@@ -1538,6 +1571,7 @@ export default function Game() {
 
             {/* Chess Board */}
             <div
+              ref={boardContainerRef}
               className="relative bg-surface-1 p-2 md:p-4 rounded-sm border border-hair overflow-hidden flex items-center justify-center w-full max-w-full"
               data-testid="chess-board-container"
               style={{
@@ -1550,14 +1584,10 @@ export default function Game() {
             >
               <div
                 style={{
-                  width: "100%",
-                  maxWidth: "min(760px, calc(100vw - 40px), calc(100vh - 260px))",
-                  // keep a square aspect while respecting available viewport space
-                  aspectRatio: "1",
-                  height: "auto",
+                  width: boardSize,
+                  height: boardSize,
                   margin: "0 auto",
                   display: "block",
-                  maxHeight: "calc(100vh - 260px)",
                   // chrome (corners/shadow/clip) lives here, not on the library's boardStyle
                   overflow: "hidden",
                 }}
@@ -1580,8 +1610,8 @@ export default function Game() {
                     lightSquareStyle: { backgroundColor: boardSquareColors.light },
                     squareStyles: customSquareStyles,
                     boardStyle: {
-                      width: "100%",
-                      height: "100%"
+                      width: boardSize,
+                      height: boardSize
                     },
                     animationDuration: 150,
                     arePiecesDraggable: !isReplayMode && !gameOver && game?.status === "active" && playerColor !== "spectator",
