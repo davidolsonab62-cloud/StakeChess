@@ -65,11 +65,20 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
         // mobileOpen/onMobileClose did. This is a controlled, always-mounted,
         // transform-driven element; it should never carry a scroll-reveal
         // class in the first place.
-        className={`fixed lg:static inset-y-0 left-0 z-50 flex flex-col shrink-0 sc-sidebar sc-no-reveal transition-transform duration-200 ease-out lg:translate-x-0 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        //
+        // On mobile this is hidden via `left` (not `transform: translateX`).
+        // A `position: fixed` element moved off-screen with a transform is a
+        // known WebKit bug: iOS Safari still counts its off-canvas width
+        // toward the page's scrollable area even though it's invisible, which
+        // silently ate the same amount of width off the right edge of every
+        // page (board, timers, footer text all clipped at once). Animating
+        // `left` instead keeps it truly in fixed/viewport coordinate space
+        // and sidesteps the bug. On lg the sidebar is `static` anyway, so
+        // `left` has no effect there.
+        className="fixed lg:static inset-y-0 z-50 flex flex-col shrink-0 sc-sidebar sc-no-reveal transition-[left] duration-200 ease-out"
         style={{
           width: compact ? 68 : 216,
+          left: mobileOpen ? 0 : -(compact ? 68 : 216),
           borderRight: "1px solid var(--hairline)",
           background: "var(--surface-0)",
           padding: "18px 12px",
