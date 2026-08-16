@@ -64,6 +64,8 @@ export default function AppShell() {
             </svg>
           </button>
 
+          <div className="flex-1" />
+
           <button
             onClick={toggleTheme}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
