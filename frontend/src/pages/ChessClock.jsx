@@ -14,6 +14,33 @@ const formatCountdown = (secs) => {
   return `${m}:${s}`;
 };
 
+const isMobileViewport = () =>
+  typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
+
+const enterFullscreen = (el) => {
+  if (!el) return;
+  const request =
+    el.requestFullscreen ||
+    el.webkitRequestFullscreen || // iOS/older Safari, Chrome fallback
+    el.msRequestFullscreen; // old Edge/IE
+  if (request) {
+    // Fullscreen must be requested synchronously from a user gesture, and
+    // some browsers (notably iOS Safari on non-video elements) reject it —
+    // swallow the rejection rather than surface an unhandled promise error.
+    Promise.resolve(request.call(el)).catch(() => {});
+  }
+};
+
+const exitFullscreen = () => {
+  if (typeof document === "undefined") return;
+  const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!isFullscreen) return;
+  const exit = document.exitFullscreen || document.webkitExitFullscreen;
+  if (exit) {
+    Promise.resolve(exit.call(document)).catch(() => {});
+  }
+};
+
 export default function ChessClock() {
   useAuth();
   const navigate = useNavigate();
@@ -24,7 +51,9 @@ export default function ChessClock() {
   const [activeClock, setActiveClock] = useState("white");
   const [clockRunning, setClockRunning] = useState(false);
   const [clockWinner, setClockWinner] = useState(null);
+  const [simulatedFullscreen, setSimulatedFullscreen] = useState(false);
   const intervalRef = useRef(null);
+  const pageRef = useRef(null);
 
   const resetClock = useCallback(() => {
     setClockRunning(false);
@@ -32,19 +61,39 @@ export default function ChessClock() {
     setBlackTimeRemaining(blackDuration * 60);
     setClockWinner(null);
     setActiveClock("white");
+    setSimulatedFullscreen(false);
+    exitFullscreen();
   }, [whiteDuration, blackDuration]);
 
   const startPauseClock = useCallback(() => {
     if (clockWinner) return;
-    setClockRunning((prev) => !prev);
+    setClockRunning((prev) => {
+      const next = !prev;
+      if (next && isMobileViewport()) {
+        // True fullscreen where the browser allows it (Android/desktop)...
+        enterFullscreen(pageRef.current);
+        // ...and a full-viewport in-page layout everywhere else (notably
+        // iOS Safari, which blocks the Fullscreen API on non-video elements
+        // and only offers real fullscreen via home-screen PWA install, which
+        // is app-wide rather than scoped to this screen).
+        setSimulatedFullscreen(true);
+      } else if (!next) {
+        exitFullscreen();
+        setSimulatedFullscreen(false);
+      }
+      return next;
+    });
   }, [clockWinner]);
 
   const handleTimeClick = useCallback(
     (side) => {
       if (clockWinner) return;
-      setActiveClock(side);
+      // Real chess clock convention: you can only tap your OWN side while it's
+      // ticking. Tapping it stops your clock and hands the turn to the opponent.
+      if (!clockRunning || side !== activeClock) return;
+      setActiveClock(side === "white" ? "black" : "white");
     },
-    [clockWinner]
+    [clockWinner, clockRunning, activeClock]
   );
 
   useEffect(() => {
@@ -62,6 +111,8 @@ export default function ChessClock() {
         if (prev <= 1) {
           setClockWinner("black");
           setClockRunning(false);
+          setSimulatedFullscreen(false);
+          exitFullscreen();
           return 0;
         }
         return prev - 1;
@@ -72,6 +123,8 @@ export default function ChessClock() {
         if (prev <= 1) {
           setClockWinner("white");
           setClockRunning(false);
+          setSimulatedFullscreen(false);
+          exitFullscreen();
           return 0;
         }
         return prev - 1;
@@ -94,9 +147,74 @@ export default function ChessClock() {
     setBlackTimeRemaining(blackDuration * 60);
   }, [blackDuration]);
 
+  if (simulatedFullscreen) {
+    return (
+      <div
+        ref={pageRef}
+        className="fixed inset-0 z-[999] flex flex-col bg-surface-1"
+        style={{ height: "100dvh" }}
+      >
+        {/* Black's clock — flipped so it reads right-side-up to the player
+            sitting across the board, like a real clock's second face. */}
+        <button
+          type="button"
+          onClick={() => handleTimeClick("black")}
+          className={`flex-1 flex flex-col items-center justify-center gap-2 bg-black transition-opacity ${
+            activeClock === "black" ? "opacity-100 shadow-[inset_0_0_0_4px_var(--brand)]" : "opacity-40"
+          }`}
+          style={{ transform: "rotate(180deg)" }}
+        >
+          <p className="text-sm uppercase tracking-[0.3em] text-white/50">Black</p>
+          <p className="text-6xl font-bold tabular-nums text-white">{formatCountdown(blackTimeRemaining)}</p>
+        </button>
+
+        {/* Center control strip: exit + pause, always upright */}
+        <div className="flex items-center justify-center gap-3 py-2 bg-surface-1 border-y border-hair">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setClockRunning(false);
+              setSimulatedFullscreen(false);
+              exitFullscreen();
+            }}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> Exit
+          </Button>
+          <Button size="sm" onClick={startPauseClock} className="font-semibold">
+            {clockRunning ? (
+              <><Pause className="w-4 h-4 mr-1" /> Pause</>
+            ) : (
+              <><Play className="w-4 h-4 mr-1" /> Resume</>
+            )}
+          </Button>
+        </div>
+
+        {clockWinner && (
+          <div className="px-4 py-2 text-center text-sm text-danger bg-danger-dim">
+            Time expired for {clockWinner === "white" ? "White" : "Black"}. {clockWinner === "white" ? "Black" : "White"} wins.
+          </div>
+        )}
+
+        {/* White's clock, upright for the player on this side */}
+        <button
+          type="button"
+          onClick={() => handleTimeClick("white")}
+          className={`flex-1 flex flex-col items-center justify-center gap-2 bg-white transition-opacity ${
+            activeClock === "white" ? "opacity-100 shadow-[inset_0_0_0_4px_var(--brand)]" : "opacity-40"
+          }`}
+        >
+          <p className="text-sm uppercase tracking-[0.3em] text-black/50">White</p>
+          <p className="text-6xl font-bold tabular-nums text-black">{formatCountdown(whiteTimeRemaining)}</p>
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="sc-page max-w-4xl mx-auto">
+    <div ref={pageRef} className="sc-page max-w-4xl mx-auto">
       <PageHeader title="Chess clock" subtitle="Tap your time to switch the active side. Reset and start/pause from here." />
+
 
       <div className="grid gap-5 lg:grid-cols-[minmax(320px,420px)_1fr]">
         <div className="rounded-2xl border border-hair bg-surface-1 p-4 shadow-sm">
