@@ -9,7 +9,6 @@ import { useAuth, API } from "@/App";
 import { resolveBoardPrefs } from "@/utils/boardPrefs";
 import { toast } from "sonner";
 import axios from "axios";
-import BackButton from "@/components/layout/BackButton";
 import {
   ChevronLeft,
   Trophy,
@@ -101,7 +100,7 @@ export default function PlayComputer() {
   const [savedComputerMatch, setSavedComputerMatch] = useState(null);
   const [savedMatchCountdown, setSavedMatchCountdown] = useState(0);
   const boardWrapperRef = useRef(null);
-  
+
   // Click-to-move state
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [possibleMoves, setPossibleMoves] = useState([]);
@@ -116,12 +115,23 @@ export default function PlayComputer() {
     saveSettings(newSettings);
   };
 
+  // Holds the expiry for the *current* game, fixed at game start (or at
+  // restore time, carried over from the saved payload). Deliberately NOT
+  // recomputed on every save — earlier this reset to Date.now() + 24h on
+  // every move, which meant an active game effectively never expired as
+  // long as you moved at least once a day. A fixed expiry from game start
+  // is simpler to reason about and matches "resume within 24h of starting,
+  // then it's gone" rather than "resume forever if you keep playing."
+  const gameExpiresAtRef = useRef(null);
+
   const saveComputerMatch = useCallback((state) => {
-    const expiresAt = Date.now() + 30000;
+    if (!gameExpiresAtRef.current) {
+      gameExpiresAtRef.current = Date.now() + 24 * 60 * 60 * 1000;
+    }
     const payload = {
       ...state,
       analysis,
-      expiresAt,
+      expiresAt: gameExpiresAtRef.current,
       savedAt: Date.now(),
     };
     localStorage.setItem("currentComputerMatch", JSON.stringify(payload));
@@ -131,15 +141,33 @@ export default function PlayComputer() {
   const clearComputerMatch = useCallback(() => {
     localStorage.removeItem("currentComputerMatch");
     setSavedComputerMatch(null);
+    gameExpiresAtRef.current = null;
   }, []);
 
 
+  // Restore-from-refresh and default-position-on-mount used to be two
+  // separate effects. Both ran on initial mount, but the second one
+  // ("if no game has started, load the URL/default FEN") closed over
+  // `gameStarted` as it was in the render that scheduled it -- still
+  // `false`, even though the restore effect above had *just* called
+  // setGameStarted(true) moments earlier in the same effect flush. State
+  // updates from one effect aren't visible to a sibling effect's closure
+  // until the next render, so the second effect always ran with the stale
+  // `false` value and unconditionally overwrote `position`/`startingFen`
+  // back to the default FEN right after the first effect had just
+  // restored the saved game -- clobbering it on every single mount,
+  // independent of the save's age. That's why a refresh reset the board
+  // even seconds after a move. Merging them into one effect removes the
+  // race entirely: there's only one outcome to compute per mount.
   useEffect(() => {
     const raw = localStorage.getItem("currentComputerMatch");
+    let restored = false;
+
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
         if (parsed?.expiresAt && parsed.expiresAt > Date.now()) {
+          gameExpiresAtRef.current = parsed.expiresAt;
           setSavedComputerMatch(parsed);
           setSavedMatchCountdown(Math.max(0, Math.floor((parsed.expiresAt - Date.now()) / 1000)));
           setDifficulty(parsed.difficulty);
@@ -151,17 +179,17 @@ export default function PlayComputer() {
           setGameStarted(true);
           setGameOver(parsed.gameOver || false);
           setResult(parsed.result || null);
+          restored = true;
         } else {
           clearComputerMatch();
         }
       } catch (err) {
+        console.error("Failed to restore saved computer match:", err, raw);
         clearComputerMatch();
       }
     }
-  }, [clearComputerMatch]);
 
-  useEffect(() => {
-    if (!gameStarted) {
+    if (!restored) {
       const fen = initialFenFromUrl || defaultFen;
       const chess = new Chess();
       try {
@@ -178,7 +206,58 @@ export default function PlayComputer() {
         setPosition(defaultFen);
       }
     }
-  }, [gameStarted, initialFenFromUrl]);
+    // Runs once on mount only. resetGame() (the "New Game" flow) already
+    // sets position/startingFen itself when it flips gameStarted back to
+    // false, so this doesn't need to stay reactive to that.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cross-tab sync: if another tab starts a new game, ends this one, or
+  // otherwise writes to the same localStorage key, pick that up here
+  // instead of silently diverging and then stomping it on our next save.
+  // The `storage` event only fires in *other* tabs, never the tab that
+  // made the write, so this can't loop back on itself.
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key !== "currentComputerMatch") return;
+
+      // Whatever changed elsewhere invalidates any in-progress click-to-move
+      // selection here — the board it was computed against may no longer
+      // be the current one.
+      setSelectedSquare(null);
+      setPossibleMoves([]);
+
+      if (!e.newValue) {
+        // Cleared elsewhere — game ended/aborted/expired in another tab.
+        setGameStarted(false);
+        setDifficulty(null);
+        setSavedComputerMatch(null);
+        gameExpiresAtRef.current = null;
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(e.newValue);
+        gameExpiresAtRef.current = parsed.expiresAt;
+        setSavedComputerMatch(parsed);
+        setDifficulty(parsed.difficulty);
+        setPlayerColor(parsed.playerColor);
+        setChessInstance(new Chess(parsed.position));
+        setPosition(parsed.position);
+        setMoveHistory(parsed.moveHistory || []);
+        setLastMove(parsed.lastMove || null);
+        setGameStarted(true);
+        setGameOver(parsed.gameOver || false);
+        setResult(parsed.result || null);
+      } catch (err) {
+        // Ignore malformed writes from elsewhere rather than crashing this tab.
+        console.error("Failed to sync computer match from another tab:", err);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   useEffect(() => {
     if (!savedComputerMatch) {
@@ -200,10 +279,10 @@ export default function PlayComputer() {
   // Get best move from Stockfish via backend
   const getComputerMove = useCallback(async () => {
     if (!difficulty || gameOver) return null;
-    
+
     setComputerThinking(true);
     setAnalysisLoading(true);
-    
+
     try {
       const response = await axios.post(
         `${API}/computer/move`,
@@ -217,15 +296,15 @@ export default function PlayComputer() {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }
       );
-      
+
       const normalized = normalizeAnalysisResponse(response.data, difficulty.depth);
       setAnalysis(normalized);
-      
+
       // Random delay to simulate human thinking
       const [minDelay, maxDelay] = difficulty.delay;
       const delay = Math.random() * (maxDelay - minDelay) + minDelay;
       await new Promise(resolve => setTimeout(resolve, delay));
-      
+
       return normalized.move;
     } catch (error) {
       console.error("Failed to get computer move:", error);
@@ -314,10 +393,10 @@ export default function PlayComputer() {
   // Make computer move
   const makeComputerMove = useCallback(async () => {
     if (gameOver) return;
-    
+
     const moveStr = await getComputerMove();
     if (!moveStr) return;
-    
+
     try {
       const move = chessInstance.move(moveStr);
       if (move) {
@@ -339,14 +418,14 @@ export default function PlayComputer() {
           return next;
         });
         setLastMove({ from: move.from, to: move.to });
-        
+
         // Play sound
         if (chessInstance.isCheckmate()) {
           moveFeedback('gameEnd', settings);
           setGameOver(true);
-          setResult({ 
-            winner: chessInstance.turn() === 'w' ? 'black' : 'white', 
-            reason: "checkmate" 
+          setResult({
+            winner: chessInstance.turn() === 'w' ? 'black' : 'white',
+            reason: "checkmate"
           });
         } else if (chessInstance.isDraw()) {
           moveFeedback('gameEnd', settings);
@@ -370,11 +449,11 @@ export default function PlayComputer() {
   // Check if it's computer's turn and make move
   useEffect(() => {
     if (!gameStarted || gameOver) return;
-    
-    const isComputerTurn = 
+
+    const isComputerTurn =
       (playerColor === "white" && currentTurn === "b") ||
       (playerColor === "black" && currentTurn === "w");
-    
+
     if (isComputerTurn && !computerThinking) {
       makeComputerMove();
     }
@@ -396,6 +475,9 @@ export default function PlayComputer() {
     setGameStarted(true);
     setAnalysis(null);
 
+    // New game — mint a fresh 24h window rather than inheriting one from
+    // whatever game (if any) preceded this.
+    gameExpiresAtRef.current = null;
     saveComputerMatch({
       difficulty: selectedDifficulty,
       playerColor: color,
@@ -408,7 +490,7 @@ export default function PlayComputer() {
 
     moveFeedback('gameStart', settings);
     toast.success(`Game started vs ${selectedDifficulty.name} (${selectedDifficulty.elo} ELO)`, { duration: 3000 });
-    
+
     // If player is black, computer moves first
     if (color === "black") {
       setTimeout(() => makeComputerMove(), 500);
@@ -476,11 +558,11 @@ export default function PlayComputer() {
     setPossibleMoves([]);
 
     if (gameOver || computerThinking) return false;
-    
-    const isPlayerTurn = 
+
+    const isPlayerTurn =
       (playerColor === "white" && chessInstance.turn() === "w") ||
       (playerColor === "black" && chessInstance.turn() === "b");
-    
+
     if (!isPlayerTurn) {
       toast.error("Wait for computer to move!");
       return false;
@@ -545,11 +627,11 @@ export default function PlayComputer() {
 
   const onSquareClick = ({ piece: clickedPiece, square }) => {
     if (gameOver || computerThinking) return;
-    
-    const isPlayerTurn = 
+
+    const isPlayerTurn =
       (playerColor === "white" && chessInstance.turn() === "w") ||
       (playerColor === "black" && chessInstance.turn() === "b");
-    
+
     if (!isPlayerTurn) return;
 
     if (selectedSquare) {
@@ -609,14 +691,19 @@ export default function PlayComputer() {
 
   const boardOrientation = playerColor;
 
+  // h:mm for the save countdown — raw seconds stopped being readable once
+  // the TTL went from 30s to 24h.
+  const formatCountdown = (totalSeconds) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours}:${String(minutes).padStart(2, "0")}`;
+  };
+
   // Difficulty selection screen
   if (!gameStarted) {
     return (
       <div>
         <div className="max-w-2xl mx-auto">
-        <div className="mb-2">
-          <BackButton />
-        </div>
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Cpu className="w-12 h-12" style={{ color: "var(--brand)" }} />
@@ -1023,10 +1110,10 @@ export default function PlayComputer() {
                   result?.winner === playerColor ? "text-brand" : "text-ink-muted"
                 }`} />
                 <h2 className="text-xl font-bold text-ink mb-2">
-                  {result?.winner === playerColor 
-                    ? "You Won!" 
-                    : result?.winner === "draw" 
-                    ? "Draw!" 
+                  {result?.winner === playerColor
+                    ? "You Won!"
+                    : result?.winner === "draw"
+                    ? "Draw!"
                     : "Computer Wins"}
                 </h2>
                 <p className="text-ink-secondary mb-4 capitalize">{result?.reason}</p>
@@ -1085,7 +1172,7 @@ export default function PlayComputer() {
                 </div>
                 {savedMatchCountdown > 0 && (
                   <span className="text-brand text-xs font-mono">
-                    {savedMatchCountdown}s left
+                    {formatCountdown(savedMatchCountdown)} left
                   </span>
                 )}
               </div>
