@@ -53,238 +53,248 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
 
   return (
     <aside
-      className={`fixed lg:static inset-y-0 left-0 z-50 flex flex-col shrink-0 sc-sidebar transition-transform duration-200 ease-out lg:translate-x-0 ${
-        mobileOpen ? "translate-x-0" : "-translate-x-full"
-      }`}
-      style={{
-        width: compact ? 68 : 216,
-        borderRight: "1px solid var(--hairline)",
-        background: "var(--surface-0)",
-        padding: "18px 12px",
-        boxShadow: mobileOpen ? "var(--shadow-md, 0 8px 24px rgba(0,0,0,0.25))" : undefined,
-      }}
-    >
-      <div className={`flex items-center ${compact ? "justify-center" : "gap-2 px-1"} pb-5`}>
-        <Link
-          to="/"
-          className={`flex items-center ${compact ? "justify-center" : "gap-2 truncate"}`}
-          aria-label="Go to landing page"
-          title="StakeChess"
-          style={{ overflow: "hidden", minWidth: 0 }}
-          onClick={onMobileClose}
-        >
-          <BrandMark collapsed={compact} />
-        </Link>
-        {!compact && (
+        // sc-no-reveal: opts this element out of useScrollReveal's
+        // auto-attach (it matches any direct child of a ".min-h-screen"
+        // element, which this is, via AppShell's wrapper div). Without this,
+        // the hook adds sc-reveal/sc-reveal-visible once the sidebar scrolls
+        // into view, and sc-reveal-visible's `transform: none` permanently
+        // overrides the translate-x classes below at equal specificity —
+        // which is why the drawer stayed visually open no matter what
+        // mobileOpen/onMobileClose did. This is a controlled, always-mounted,
+        // transform-driven element; it should never carry a scroll-reveal
+        // class in the first place.
+        className={`fixed lg:static inset-y-0 left-0 z-50 flex flex-col shrink-0 sc-sidebar sc-no-reveal transition-transform duration-200 ease-out lg:translate-x-0 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{
+          width: compact ? 68 : 216,
+          borderRight: "1px solid var(--hairline)",
+          background: "var(--surface-0)",
+          padding: "18px 12px",
+          boxShadow: mobileOpen ? "var(--shadow-md, 0 8px 24px rgba(0,0,0,0.25))" : undefined,
+        }}
+      >
+        <div className={`flex items-center ${compact ? "justify-center" : "gap-2 px-1"} pb-5`}>
+          <Link
+            to="/"
+            className={`flex items-center ${compact ? "justify-center" : "gap-2 truncate"}`}
+            aria-label="Go to landing page"
+            title="StakeChess"
+            style={{ overflow: "hidden", minWidth: 0 }}
+            onClick={onMobileClose}
+          >
+            <BrandMark collapsed={compact} />
+          </Link>
+          {!compact && (
+            <button
+              onClick={onToggle}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              className="ml-auto hidden lg:flex h-7 w-7 items-center justify-center rounded-lg sc-icon-btn"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={onMobileClose}
+            aria-label="Close menu"
+            title="Close menu"
+            className="ml-auto flex lg:hidden h-10 w-10 items-center justify-center rounded-lg sc-icon-btn"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        {compact && (
           <button
             onClick={onToggle}
-            aria-label="Collapse sidebar"
-            title="Collapse sidebar"
-            className="ml-auto hidden lg:flex h-7 w-7 items-center justify-center rounded-lg sc-icon-btn"
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+            className="mb-3 hidden lg:flex h-9 w-full items-center justify-center rounded-lg sc-icon-btn"
             style={{ color: "var(--text-secondary)" }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="9" y1="3" x2="9" y2="21" />
+              <line x1="15" y1="3" x2="15" y2="21" />
             </svg>
           </button>
         )}
-        <button
-          onClick={onMobileClose}
-          aria-label="Close menu"
-          title="Close menu"
-          className="ml-auto flex lg:hidden h-10 w-10 items-center justify-center rounded-lg sc-icon-btn"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      </div>
 
-      {compact && (
-        <button
-          onClick={onToggle}
-          aria-label="Expand sidebar"
-          title="Expand sidebar"
-          className="mb-3 hidden lg:flex h-9 w-full items-center justify-center rounded-lg sc-icon-btn"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <line x1="15" y1="3" x2="15" y2="21" />
-          </svg>
-        </button>
-      )}
-
-      <nav className="flex flex-col gap-0.5 overflow-y-auto">
-      {NAV_ITEMS.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          title={compact ? item.label : undefined}
-          className={`${rowBase} ${compact ? "justify-center px-0" : ""}`}
-          style={({ isActive }) => ({
-            background: isActive ? "var(--brand-dim)" : "transparent",
-            color: isActive ? "var(--brand)" : "var(--text-secondary)",
-          })}
-          onClick={onMobileClose}
-        >
-          <div className="flex items-center justify-between w-full gap-3">
-            <div className="flex items-center gap-3">
-              <i className="w-[18px] text-center not-italic shrink-0">{item.icon}</i>
-              {!compact && item.label}
+        <nav className="flex flex-col gap-0.5 overflow-y-auto">
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            title={compact ? item.label : undefined}
+            className={`${rowBase} ${compact ? "justify-center px-0" : ""}`}
+            style={({ isActive }) => ({
+              background: isActive ? "var(--brand-dim)" : "transparent",
+              color: isActive ? "var(--brand)" : "var(--text-secondary)",
+            })}
+            onClick={onMobileClose}
+          >
+            <div className="flex items-center justify-between w-full gap-3">
+              <div className="flex items-center gap-3">
+                <i className="w-[18px] text-center not-italic shrink-0">{item.icon}</i>
+                {!compact && item.label}
+              </div>
+              {!compact && (
+                <div className="flex items-center gap-2">
+                  {item.to === "/challenge-queue" && pendingChallengeCount > 0 && (
+                    <span className="inline-flex items-center justify-center rounded-full bg-brand text-on-brand text-[10px] font-semibold px-2 py-0.5">
+                      {pendingChallengeCount}
+                    </span>
+                  )}
+                  {item.to === "/live" && watchableMatchCount > 0 && (
+                    <span className="inline-flex items-center justify-center rounded-full bg-[#FF6B6B] text-white text-[10px] font-semibold px-2 py-0.5">
+                      {watchableMatchCount}
+                    </span>
+                  )}
+                  {item.to === "/puzzles" && puzzleProgress?.current_difficulty > 0 && (
+                    <span className="inline-flex items-center justify-center rounded-full bg-[#7C5CFC] text-white text-[10px] font-semibold px-2 py-0.5">
+                      {puzzleProgress.current_difficulty}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            {!compact && (
-              <div className="flex items-center gap-2">
-                {item.to === "/challenge-queue" && pendingChallengeCount > 0 && (
-                  <span className="inline-flex items-center justify-center rounded-full bg-brand text-on-brand text-[10px] font-semibold px-2 py-0.5">
-                    {pendingChallengeCount}
-                  </span>
-                )}
-                {item.to === "/live" && watchableMatchCount > 0 && (
-                  <span className="inline-flex items-center justify-center rounded-full bg-[#FF6B6B] text-white text-[10px] font-semibold px-2 py-0.5">
-                    {watchableMatchCount}
-                  </span>
-                )}
-                {item.to === "/puzzles" && puzzleProgress?.current_difficulty > 0 && (
-                  <span className="inline-flex items-center justify-center rounded-full bg-[#7C5CFC] text-white text-[10px] font-semibold px-2 py-0.5">
-                    {puzzleProgress.current_difficulty}
-                  </span>
-                )}
+          </NavLink>
+        ))}
+        {isAdmin && (
+          <NavLink
+            to="/admin"
+            title={compact ? "Admin" : undefined}
+            className={`${rowBase} ${compact ? "justify-center px-0" : ""}`}
+            style={({ isActive }) => ({
+              background: isActive ? "var(--brand-dim)" : "transparent",
+              color: isActive ? "var(--brand)" : "var(--text-secondary)",
+            })}
+            onClick={onMobileClose}
+          >
+            <i className="w-[18px] text-center not-italic shrink-0">◆</i>
+            {!compact && "Admin"}
+          </NavLink>
+        )}
+      </nav>
+
+      <div className="flex-1" />
+
+      <button
+        onClick={toggleTheme}
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        title={isDark ? "Light mode" : "Dark mode"}
+        className={`${rowBase} w-full ${compact ? "justify-center px-0" : ""}`}
+        style={{ color: "var(--text-secondary)", background: "transparent" }}
+      >
+        <i className="w-[18px] flex items-center justify-center not-italic shrink-0">
+          {isDark ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+            </svg>
+          )}
+        </i>
+        {!compact && (isDark ? "Light mode" : "Dark mode")}
+      </button>
+
+      {user && (
+        <div
+          className={`flex items-center gap-2 ${compact ? "justify-center" : ""}`}
+          style={{ borderTop: "1px solid var(--hairline)", marginTop: 8, paddingTop: 6 }}
+        >
+          <NavLink
+            to="/profile"
+            title={compact ? user.username || user.name : undefined}
+            className={`flex items-center gap-2.5 rounded-[9px] no-underline min-w-0 sc-nav-row ${compact ? "justify-center p-1.5" : "px-2 py-2.5 flex-1"}`}
+            onClick={onMobileClose}
+          >
+            {user.picture ? (
+              <img
+                src={user.picture}
+                alt=""
+                className="h-9 w-9 rounded-[9px] object-cover shrink-0"
+                style={{ border: "1px solid var(--hairline)" }}
+              />
+            ) : (
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-[9px] font-bold shrink-0"
+                style={{ background: "var(--surface-1)", border: "1px solid var(--hairline)", color: "var(--brand)" }}
+              >
+                {(user.username || user.name || "?")[0]?.toUpperCase()}
               </div>
             )}
-          </div>
-        </NavLink>
-      ))}
-      {isAdmin && (
-        <NavLink
-          to="/admin"
-          title={compact ? "Admin" : undefined}
-          className={`${rowBase} ${compact ? "justify-center px-0" : ""}`}
-          style={({ isActive }) => ({
-            background: isActive ? "var(--brand-dim)" : "transparent",
-            color: isActive ? "var(--brand)" : "var(--text-secondary)",
-          })}
-          onClick={onMobileClose}
-        >
-          <i className="w-[18px] text-center not-italic shrink-0">◆</i>
-          {!compact && "Admin"}
-        </NavLink>
-      )}
-    </nav>
-
-    <div className="flex-1" />
-
-    <button
-      onClick={toggleTheme}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Light mode" : "Dark mode"}
-      className={`${rowBase} w-full ${compact ? "justify-center px-0" : ""}`}
-      style={{ color: "var(--text-secondary)", background: "transparent" }}
-    >
-      <i className="w-[18px] flex items-center justify-center not-italic shrink-0">
-        {isDark ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
-          </svg>
-        )}
-      </i>
-      {!compact && (isDark ? "Light mode" : "Dark mode")}
-    </button>
-
-    {user && (
-      <div
-        className={`flex items-center gap-2 ${compact ? "justify-center" : ""}`}
-        style={{ borderTop: "1px solid var(--hairline)", marginTop: 8, paddingTop: 6 }}
-      >
-        <NavLink
-          to="/profile"
-          title={compact ? user.username || user.name : undefined}
-          className={`flex items-center gap-2.5 rounded-[9px] no-underline min-w-0 sc-nav-row ${compact ? "justify-center p-1.5" : "px-2 py-2.5 flex-1"}`}
-          onClick={onMobileClose}
-        >
-          {user.picture ? (
-            <img
-              src={user.picture}
-              alt=""
-              className="h-9 w-9 rounded-[9px] object-cover shrink-0"
-              style={{ border: "1px solid var(--hairline)" }}
-            />
-          ) : (
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-[9px] font-bold shrink-0"
-              style={{ background: "var(--surface-1)", border: "1px solid var(--hairline)", color: "var(--brand)" }}
-            >
-              {(user.username || user.name || "?")[0]?.toUpperCase()}
-            </div>
-          )}
+            {!compact && (
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+                  {user.username || user.name}
+                </div>
+                <div className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                  {user.rating ?? user.elo ?? "—"} ELO
+                </div>
+              </div>
+            )}
+          </NavLink>
           {!compact && (
-            <div className="min-w-0">
-              <div className="text-[13px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>
-                {user.username || user.name}
-              </div>
-              <div className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                {user.rating ?? user.elo ?? "—"} ELO
-              </div>
-            </div>
+            <button
+              onClick={logout}
+              aria-label="Log out"
+              title="Log out"
+              className="flex h-9 w-9 items-center justify-center rounded-[9px] shrink-0 sc-icon-btn"
+              style={{ color: "var(--text-secondary)", background: "transparent" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
           )}
-        </NavLink>
-        {!compact && (
-          <button
-            onClick={logout}
-            aria-label="Log out"
-            title="Log out"
-            className="flex h-9 w-9 items-center justify-center rounded-[9px] shrink-0 sc-icon-btn"
-            style={{ color: "var(--text-secondary)", background: "transparent" }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-          </button>
-        )}
-      </div>
-    )}
-
-    <div style={{ borderTop: "1px solid var(--hairline)", marginTop: 12, paddingTop: 12 }}>
-      {!compact && (
-        <div className="mb-3 px-1">
-          <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
-            About StakeChess
-          </div>
         </div>
       )}
-      <nav className="flex flex-col gap-0.5">
-        <Link to="/wallet" title={compact ? "Subscribe" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-          <i className="w-[18px] text-center not-italic shrink-0">💎</i>
-          {!compact && "Subscribe"}
-        </Link>
-        <Link to="/support" title={compact ? "Support" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-          <i className="w-[18px] text-center not-italic shrink-0">💬</i>
-          {!compact && "Support"}
-        </Link>
-        <Link to="/privacy" title={compact ? "Privacy" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-          <i className="w-[18px] text-center not-italic shrink-0">🔒</i>
-          {!compact && "Privacy"}
-        </Link>
-        <Link to="/terms" title={compact ? "Terms" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-          <i className="w-[18px] text-center not-italic shrink-0">📋</i>
-          {!compact && "Terms"}
-        </Link>
-        <Link to="/database" title={compact ? "Database" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
-          <i className="w-[18px] text-center not-italic shrink-0">📊</i>
-          {!compact && "Database"}
-        </Link>
-      </nav>
-    </div>
-    </aside>
+
+      <div style={{ borderTop: "1px solid var(--hairline)", marginTop: 12, paddingTop: 12 }}>
+        {!compact && (
+          <div className="mb-3 px-1">
+            <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
+              About StakeChess
+            </div>
+          </div>
+        )}
+        <nav className="flex flex-col gap-0.5">
+          <Link to="/wallet" title={compact ? "Subscribe" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+            <i className="w-[18px] text-center not-italic shrink-0">💎</i>
+            {!compact && "Subscribe"}
+          </Link>
+          <Link to="/support" title={compact ? "Support" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+            <i className="w-[18px] text-center not-italic shrink-0">💬</i>
+            {!compact && "Support"}
+          </Link>
+          <Link to="/privacy" title={compact ? "Privacy" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+            <i className="w-[18px] text-center not-italic shrink-0">🔒</i>
+            {!compact && "Privacy"}
+          </Link>
+          <Link to="/terms" title={compact ? "Terms" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+            <i className="w-[18px] text-center not-italic shrink-0">📋</i>
+            {!compact && "Terms"}
+          </Link>
+          <Link to="/database" title={compact ? "Database" : undefined} className={`${rowBase} text-[13px] ${compact ? "justify-center px-0" : ""}`} style={{ color: "var(--text-secondary)" }} onClick={onMobileClose}>
+            <i className="w-[18px] text-center not-italic shrink-0">📊</i>
+            {!compact && "Database"}
+          </Link>
+        </nav>
+      </div>
+      </aside>
   );
 }
