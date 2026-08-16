@@ -2046,6 +2046,65 @@ async def get_watchable_games_count():
     count = await get_watchable_match_count()
     return {"count": count}
 
+# ============= STUDY / YOUTUBE PREVIEW =============
+
+# GothamChess's official channel — resolved search results are restricted to
+# this channel so a study never surfaces someone else's unrelated video.
+GOTHAMCHESS_CHANNEL_ID = "UCQHX6ViZmPsWiYSFAyS0a3Q"
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
+
+@api_router.get("/youtube/resolve")
+async def resolve_youtube_search(query: str):
+    """Resolve a 'search_query=...' style link (as stored in studies.js) to a
+    real, embeddable video ID from GothamChess's channel. Results are cached
+    in Mongo indefinitely (query text -> video_id rarely needs to change) so
+    repeat page loads don't re-spend YouTube Data API quota."""
+    query = query.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="query is required")
+
+    cached = await db.youtube_cache.find_one({"query": query}, {"_id": 0})
+    if cached:
+        return {"video_id": cached["video_id"]}
+
+    if not YOUTUBE_API_KEY:
+        raise HTTPException(status_code=503, detail="YouTube API not configured")
+
+    try:
+        resp = requests.get(
+            "https://www.googleapis.com/youtube/v3/search",
+            params={
+                "part": "snippet",
+                "q": query,
+                "type": "video",
+                "channelId": GOTHAMCHESS_CHANNEL_ID,
+                "maxResults": 1,
+                "key": YOUTUBE_API_KEY,
+            },
+            timeout=8,
+        )
+        resp.raise_for_status()
+        items = resp.json().get("items", [])
+        if not items:
+            raise HTTPException(status_code=404, detail="No matching video found on channel")
+
+        video_id = items[0]["id"]["videoId"]
+        await db.youtube_cache.update_one(
+            {"query": query},
+            {"$set": {
+                "query": query,
+                "video_id": video_id,
+                "resolved_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+        return {"video_id": video_id}
+    except HTTPException:
+        raise
+    except requests.RequestException as e:
+        logger.error(f"YouTube search resolution failed for query={query!r}: {e}")
+        raise HTTPException(status_code=502, detail="YouTube search failed")
+
 @api_router.get("/games/{game_id}", response_model=GameResponse)
 async def get_game(game_id: str = FastAPIPath(..., regex=r"^game_.*$")):
     game = await db.games.find_one({"game_id": game_id}, {"_id": 0})
