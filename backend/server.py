@@ -33,6 +33,13 @@ try:
 except ImportError:
     Stockfish = None
 
+# Try to import cryptography for at-rest encryption of stream OAuth tokens
+try:
+    from cryptography.fernet import Fernet, InvalidToken
+except ImportError:
+    Fernet = None
+    InvalidToken = Exception
+
 # Configure logging early so it is available during module import
 logging.basicConfig(
     level=logging.INFO,
@@ -99,6 +106,48 @@ db = client[os.environ['DB_NAME']]
 SECRET_KEY = os.environ.get('JWT_SECRET', 'stakechess-secret-key-change-in-production')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
+
+# Encryption for stream OAuth tokens at rest (access_token / refresh_token in
+# db.stream_accounts). Generate a key once with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# and set it as STREAM_TOKEN_ENCRYPTION_KEY in the environment - never commit it.
+STREAM_TOKEN_ENCRYPTION_KEY = os.environ.get('STREAM_TOKEN_ENCRYPTION_KEY')
+_stream_cipher = None
+if Fernet and STREAM_TOKEN_ENCRYPTION_KEY:
+    try:
+        _stream_cipher = Fernet(STREAM_TOKEN_ENCRYPTION_KEY.encode())
+    except (ValueError, TypeError) as e:
+        logger.error(f"Invalid STREAM_TOKEN_ENCRYPTION_KEY, stream tokens will NOT be encrypted: {e}")
+elif Fernet and not STREAM_TOKEN_ENCRYPTION_KEY:
+    logger.warning("STREAM_TOKEN_ENCRYPTION_KEY not set - stream OAuth tokens will be stored in plaintext")
+else:
+    logger.warning("cryptography package not installed - stream OAuth tokens will be stored in plaintext")
+
+
+def encrypt_stream_token(value: Optional[str]) -> Optional[str]:
+    """Encrypts a stream OAuth token for storage. Passes the value through
+    unchanged (with a one-time warning already logged above) if no cipher is
+    configured, so the feature still works in dev without a key set."""
+    if value is None:
+        return None
+    if not _stream_cipher:
+        return value
+    return _stream_cipher.encrypt(value.encode()).decode()
+
+
+def decrypt_stream_token(value: Optional[str]) -> Optional[str]:
+    """Reverses encrypt_stream_token. Returns None (rather than raising) if
+    the value can't be decrypted, so a stale/corrupt token just looks
+    disconnected instead of crashing the request."""
+    if value is None:
+        return None
+    if not _stream_cipher:
+        return value
+    try:
+        return _stream_cipher.decrypt(value.encode()).decode()
+    except InvalidToken:
+        logger.error("Failed to decrypt a stream OAuth token - it may predate the current encryption key")
+        return None
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -286,6 +335,21 @@ class MoveRequest(BaseModel):
     move_time: Optional[float] = None
     white_time: Optional[int] = None
     black_time: Optional[int] = None
+
+STREAM_PLATFORMS = ("tiktok", "instagram", "facebook", "youtube")
+
+class StreamAccountResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    platform: str
+    connected: bool = False
+    username: Optional[str] = None
+    connected_at: Optional[str] = None
+
+class StreamConnectRequest(BaseModel):
+    redirect_uri: Optional[str] = None
+
+class StreamGoLiveRequest(BaseModel):
+    game_id: Optional[str] = None
 
 class WalletTransaction(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -2168,6 +2232,427 @@ async def cancel_matchmaking(request: Request):
 async def get_watchable_games_count():
     count = await get_watchable_match_count()
     return {"count": count}
+
+# ============= SOCIAL STREAMING (Stream to TikTok / Instagram / Facebook / YouTube) =============
+# Mirrors the /auth/google/* pattern above: use the real provider's OAuth
+# authorize flow when that platform's client id/secret are configured in the
+# environment, otherwise fall back to an instant local "connect" so the
+# feature is fully clickable in dev/demo environments without live API keys.
+#
+# Each connected account is stored per-user in db.stream_accounts, keyed by
+# (user_id, platform). Going live records a db.stream_sessions row and emits
+# a socket event to the game room so spectators can see the match is being
+# broadcast live elsewhere.
+
+STREAM_OAUTH_CONFIG = {
+    "tiktok": {
+        "authorize_url": "https://www.tiktok.com/v2/auth/authorize",
+        "token_url": "https://open.tiktokapis.com/v2/oauth/token/",
+        "client_id_env": "TIKTOK_CLIENT_ID",
+        "client_secret_env": "TIKTOK_CLIENT_SECRET",
+        "scope": "user.info.basic,video.publish",
+    },
+    "instagram": {
+        "authorize_url": "https://api.instagram.com/oauth/authorize",
+        "token_url": "https://api.instagram.com/oauth/access_token",
+        "client_id_env": "INSTAGRAM_CLIENT_ID",
+        "client_secret_env": "INSTAGRAM_CLIENT_SECRET",
+        # Current Instagram API with Instagram Login (business login) scopes.
+        "scope": "instagram_business_basic,instagram_business_content_publish",
+    },
+    "facebook": {
+        "authorize_url": "https://www.facebook.com/v19.0/dialog/oauth",
+        "token_url": "https://graph.facebook.com/v19.0/oauth/access_token",
+        "client_id_env": "FACEBOOK_CLIENT_ID",
+        "client_secret_env": "FACEBOOK_CLIENT_SECRET",
+        "scope": "public_profile,pages_manage_posts,publish_video",
+    },
+    "youtube": {
+        "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "client_id_env": "YOUTUBE_CLIENT_ID",
+        "client_secret_env": "YOUTUBE_CLIENT_SECRET",
+        "scope": "https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.force-ssl",
+    },
+}
+
+
+def _exchange_stream_code_for_token(platform: str, code: str, redirect_uri: str, client_id: str, client_secret: str) -> dict:
+    """Platform-specific authorization-code -> access-token exchange. Each
+    provider has a slightly different request shape; this normalizes the
+    result to {access_token, refresh_token, expires_in}."""
+    config = STREAM_OAUTH_CONFIG[platform]
+
+    if platform == "tiktok":
+        resp = requests.post(
+            config["token_url"],
+            headers={"Content-Type": "application/x-www-form-urlencoded", "Cache-Control": "no-cache"},
+            data={
+                "client_key": client_id,
+                "client_secret": client_secret,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri,
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            "access_token": data.get("access_token"),
+            "refresh_token": data.get("refresh_token"),
+            "expires_in": data.get("expires_in"),
+        }
+
+    if platform == "instagram":
+        resp = requests.post(
+            config["token_url"],
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri,
+                "code": code,
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        short_lived_token = data.get("access_token")
+
+        # Exchange the 1-hour short-lived token for a 60-day long-lived one.
+        long_lived_token = short_lived_token
+        expires_in = 3600
+        if short_lived_token:
+            try:
+                exch = requests.get(
+                    "https://graph.instagram.com/access_token",
+                    params={
+                        "grant_type": "ig_exchange_token",
+                        "client_secret": client_secret,
+                        "access_token": short_lived_token,
+                    },
+                    timeout=20,
+                )
+                exch.raise_for_status()
+                exch_data = exch.json()
+                long_lived_token = exch_data.get("access_token", short_lived_token)
+                expires_in = exch_data.get("expires_in", 60 * 24 * 3600)
+            except requests.RequestException as e:
+                logger.warning(f"Instagram long-lived token exchange failed, keeping short-lived token: {e}")
+
+        return {"access_token": long_lived_token, "refresh_token": None, "expires_in": expires_in}
+
+    if platform == "facebook":
+        resp = requests.get(
+            config["token_url"],
+            params={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+                "code": code,
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return {"access_token": data.get("access_token"), "refresh_token": None, "expires_in": data.get("expires_in")}
+
+    if platform == "youtube":
+        resp = requests.post(
+            config["token_url"],
+            data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            "access_token": data.get("access_token"),
+            "refresh_token": data.get("refresh_token"),
+            "expires_in": data.get("expires_in"),
+        }
+
+    raise HTTPException(status_code=400, detail=f"No token exchange implemented for {platform}")
+
+
+def _fetch_stream_platform_username(platform: str, access_token: str) -> Optional[str]:
+    """Best-effort lookup of a display name/handle to show in the Stream
+    dialog. Never raises - a failed lookup just means we show no username."""
+    try:
+        if platform == "tiktok":
+            resp = requests.post(
+                "https://open.tiktokapis.com/v2/user/info/",
+                params={"fields": "display_name"},
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json().get("data", {}).get("user", {}).get("display_name")
+
+        if platform == "instagram":
+            resp = requests.get(
+                "https://graph.instagram.com/me",
+                params={"fields": "username", "access_token": access_token},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json().get("username")
+
+        if platform == "facebook":
+            resp = requests.get(
+                "https://graph.facebook.com/me",
+                params={"fields": "name", "access_token": access_token},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json().get("name")
+
+        if platform == "youtube":
+            resp = requests.get(
+                "https://www.googleapis.com/youtube/v3/channels",
+                params={"part": "snippet", "mine": "true"},
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            items = resp.json().get("items", [])
+            return items[0]["snippet"]["title"] if items else None
+    except requests.RequestException as e:
+        logger.warning(f"Could not fetch {platform} username after connect: {e}")
+    return None
+
+
+def _require_valid_platform(platform: str) -> str:
+    platform = (platform or "").lower()
+    if platform not in STREAM_PLATFORMS:
+        raise HTTPException(status_code=400, detail=f"Unsupported platform. Choose one of: {', '.join(STREAM_PLATFORMS)}")
+    return platform
+
+
+@api_router.get("/stream/accounts", response_model=List[StreamAccountResponse])
+async def get_stream_accounts(request: Request):
+    """Connection status for every supported platform for the current user,
+    so the Stream dialog can show 'Connected as ...' vs 'Sync your account'."""
+    user = await get_current_user(request)
+    existing = await db.stream_accounts.find(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ).to_list(len(STREAM_PLATFORMS))
+    by_platform = {a["platform"]: a for a in existing}
+
+    return [
+        StreamAccountResponse(
+            platform=platform,
+            connected=bool(by_platform.get(platform, {}).get("connected")),
+            username=by_platform.get(platform, {}).get("username"),
+            connected_at=by_platform.get(platform, {}).get("connected_at"),
+        )
+        for platform in STREAM_PLATFORMS
+    ]
+
+
+@api_router.post("/stream/{platform}/connect")
+async def connect_stream_account(platform: str, request: Request, body: StreamConnectRequest = StreamConnectRequest()):
+    """Kick off syncing a social account. Returns an auth_url to redirect the
+    user to when the real provider is configured; otherwise connects
+    immediately with a local placeholder account (dev/demo fallback)."""
+    platform = _require_valid_platform(platform)
+    user = await get_current_user(request)
+    config = STREAM_OAUTH_CONFIG[platform]
+    client_id = os.environ.get(config["client_id_env"])
+    client_secret = os.environ.get(config["client_secret_env"])
+    redirect_uri = body.redirect_uri or f"http://localhost:3000/stream/{platform}/callback"
+
+    if client_id and client_secret:
+        state = f"{user['user_id']}:{uuid.uuid4().hex}"
+        await db.stream_oauth_states.insert_one({
+            "state": state,
+            "user_id": user["user_id"],
+            "platform": platform,
+            "redirect_uri": redirect_uri,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        params = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": config["scope"],
+            "state": state,
+        }
+        return {"auth_url": f"{config['authorize_url']}?{urlencode(params)}"}
+
+    # No live credentials configured for this platform - connect immediately
+    # so the flow stays fully testable end to end.
+    placeholder_username = f"{user['username']}_{platform}"
+    await db.stream_accounts.update_one(
+        {"user_id": user["user_id"], "platform": platform},
+        {"$set": {
+            "user_id": user["user_id"],
+            "platform": platform,
+            "connected": True,
+            "username": placeholder_username,
+            "connected_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"connected": True, "username": placeholder_username}
+
+
+@api_router.get("/stream/{platform}/callback")
+async def stream_oauth_callback(platform: str, request: Request):
+    """Completes the real OAuth flow for platforms with credentials
+    configured. The provider redirects here with `code` and our `state`."""
+    platform = _require_valid_platform(platform)
+    code = request.query_params.get("code")
+    state = request.query_params.get("state")
+    if not code or not state:
+        raise HTTPException(status_code=400, detail="Missing code or state")
+
+    oauth_state = await db.stream_oauth_states.find_one({"state": state, "platform": platform}, {"_id": 0})
+    if not oauth_state:
+        raise HTTPException(status_code=400, detail="Invalid or expired state")
+
+    config = STREAM_OAUTH_CONFIG[platform]
+    client_id = os.environ.get(config["client_id_env"])
+    client_secret = os.environ.get(config["client_secret_env"])
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=503, detail=f"{platform} credentials not configured")
+
+    try:
+        token_data = _exchange_stream_code_for_token(
+            platform, code, oauth_state["redirect_uri"], client_id, client_secret
+        )
+    except requests.RequestException as e:
+        logger.error(f"{platform} token exchange failed: {e}")
+        raise HTTPException(status_code=502, detail=f"{platform} token exchange failed")
+
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=502, detail=f"{platform} did not return an access token")
+
+    username = _fetch_stream_platform_username(platform, access_token)
+    expires_in = token_data.get("expires_in")
+    expires_at = (
+        (datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))).isoformat()
+        if expires_in else None
+    )
+
+    # Tokens are encrypted at rest with STREAM_TOKEN_ENCRYPTION_KEY (Fernet) -
+    # see encrypt_stream_token/decrypt_stream_token above. This collection
+    # holds live credentials that can post to a user's account, so treat it
+    # accordingly (never returned by /stream/accounts, decrypt only when
+    # actually calling out to the platform, e.g. in go_live).
+    await db.stream_accounts.update_one(
+        {"user_id": oauth_state["user_id"], "platform": platform},
+        {"$set": {
+            "user_id": oauth_state["user_id"],
+            "platform": platform,
+            "connected": True,
+            "username": username,
+            "access_token": encrypt_stream_token(access_token),
+            "refresh_token": encrypt_stream_token(token_data.get("refresh_token")),
+            "token_expires_at": expires_at,
+            "connected_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    await db.stream_oauth_states.delete_one({"state": state})
+
+    frontend_redirect = oauth_state.get("redirect_uri") or "http://localhost:3000/lobby"
+    return JSONResponse({"redirect_url": frontend_redirect, "connected": True})
+
+
+@api_router.post("/stream/{platform}/go-live")
+async def go_live(platform: str, request: Request, body: StreamGoLiveRequest = StreamGoLiveRequest()):
+    """Starts broadcasting the caller's match to the given platform. Requires
+    that platform to already be connected via /stream/{platform}/connect."""
+    platform = _require_valid_platform(platform)
+    user = await get_current_user(request)
+
+    account = await db.stream_accounts.find_one(
+        {"user_id": user["user_id"], "platform": platform, "connected": True}, {"_id": 0}
+    )
+    if not account:
+        raise HTTPException(status_code=400, detail=f"Connect your {platform} account first")
+
+    # Decrypted here, right before use, rather than at rest above - wire this
+    # into the platform's actual live-broadcast/RTMP-ingest call once each
+    # provider's streaming API is integrated.
+    access_token = decrypt_stream_token(account.get("access_token"))
+    if account.get("access_token") and not access_token:
+        raise HTTPException(status_code=401, detail=f"Your {platform} connection is invalid - please reconnect")
+
+    game = None
+    if body.game_id:
+        game = await db.games.find_one({"game_id": body.game_id}, {"_id": 0})
+        if not game:
+            raise HTTPException(status_code=404, detail="Game not found")
+
+    stream_id = f"stream_{uuid.uuid4().hex[:12]}"
+    stream_doc = {
+        "stream_id": stream_id,
+        "user_id": user["user_id"],
+        "username": user["username"],
+        "platform": platform,
+        "game_id": body.game_id,
+        "status": "live",
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "ended_at": None,
+    }
+    await db.stream_sessions.insert_one(stream_doc)
+    stream_doc.pop("_id", None)
+
+    if game:
+        await sio.emit("stream_started", {
+            "game_id": body.game_id,
+            "platform": platform,
+            "username": user["username"],
+            "stream_id": stream_id,
+        }, room=body.game_id)
+
+    return stream_doc
+
+
+@api_router.post("/stream/{platform}/end")
+async def end_stream(platform: str, request: Request):
+    """Stops the caller's current live stream on the given platform, if any."""
+    platform = _require_valid_platform(platform)
+    user = await get_current_user(request)
+
+    session = await db.stream_sessions.find_one(
+        {"user_id": user["user_id"], "platform": platform, "status": "live"}, {"_id": 0}
+    )
+    if not session:
+        return {"ended": False}
+
+    await db.stream_sessions.update_one(
+        {"stream_id": session["stream_id"]},
+        {"$set": {"status": "ended", "ended_at": datetime.now(timezone.utc).isoformat()}},
+    )
+
+    if session.get("game_id"):
+        await sio.emit("stream_ended", {
+            "game_id": session["game_id"],
+            "platform": platform,
+            "username": user["username"],
+            "stream_id": session["stream_id"],
+        }, room=session["game_id"])
+
+    return {"ended": True}
+
+
+@api_router.delete("/stream/{platform}")
+async def disconnect_stream_account(platform: str, request: Request):
+    """Unsyncs a previously connected social account."""
+    platform = _require_valid_platform(platform)
+    user = await get_current_user(request)
+    result = await db.stream_accounts.delete_one({"user_id": user["user_id"], "platform": platform})
+    return {"disconnected": result.deleted_count > 0}
 
 # ============= STUDY / YOUTUBE PREVIEW =============
 

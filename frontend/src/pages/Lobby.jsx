@@ -35,10 +35,12 @@ import {
   Copy,
   Check,
   Play,
+  Radio,
 } from "lucide-react";
 import { SkeletonStatsRow, SkeletonPanel } from "@/components/ui/skeletons";
 import PageHeader from "@/components/layout/PageHeader";
 import PlayMenuDialog from "@/components/play/PlayMenuDialog";
+import StreamMenuDialog from "@/components/play/StreamMenuDialog";
 
 const TIME_CONTROLS = [
   { value: "1+0", label: "1 min", type: "bullet" },
@@ -71,6 +73,7 @@ export default function Lobby() {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [playDialogOpen, setPlayDialogOpen] = useState(false);
+  const [streamDialogOpen, setStreamDialogOpen] = useState(false);
   const [joiningGame, setJoiningGame] = useState(null);
   const [currentGameId, setCurrentGameId] = useState(null);
   const [currentGameExpiry, setCurrentGameExpiry] = useState(null);
@@ -337,20 +340,19 @@ export default function Lobby() {
         <div className="flex gap-2.5 flex-wrap">
           <Button
             variant="outline"
-            onClick={() => navigate("/import-pgn")}
+            onClick={() => setStreamDialogOpen(true)}
             className="border font-semibold"
             style={{ background: "var(--surface-1)", borderColor: "var(--hairline)", color: "var(--text-primary)" }}
+            data-testid="stream-btn"
           >
-            Import PGN
+            <Radio className="w-4 h-4 mr-2" />
+            Stream
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/board-editor")}
-            className="border font-semibold"
-            style={{ background: "var(--surface-1)", borderColor: "var(--hairline)", color: "var(--text-primary)" }}
-          >
-            Board editor
-          </Button>
+          <StreamMenuDialog
+            open={streamDialogOpen}
+            onOpenChange={setStreamDialogOpen}
+            gameId={currentGameId}
+          />
           <Button
             className="font-semibold"
             style={{ background: "var(--brand)", color: "var(--on-brand)" }}
