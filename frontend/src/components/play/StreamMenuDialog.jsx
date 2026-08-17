@@ -17,6 +17,16 @@ import { Music2, Instagram, Facebook, Youtube, Check, Loader2 } from "lucide-rea
  *   POST /api/stream/:platform/connect -> { auth_url }  (OAuth-style connect)
  *   POST /api/stream/:platform/go-live -> { stream_id } (starts the stream)
  * Adjust the endpoint paths to match your actual backend if different.
+ *
+ * OAuth note: connecting sends the browser away to the provider
+ * (window.location.href = auth_url), so the SPA fully unloads. The
+ * *provider's* redirect_uri is our backend's own callback route (computed
+ * server-side - never send a frontend URL as redirect_uri, the provider
+ * would hand the auth code to the SPA instead of to the backend). What we
+ * DO send is `frontend_redirect`: where the backend should bounce the
+ * browser back to once it's finished the token exchange. The backend
+ * appends `?stream_connected=<platform>` or `?stream_error=<platform>` to
+ * that URL, which the effect below picks up after the reload.
  */
 const PLATFORMS = [
   { id: "tiktok", label: "TikTok", icon: Music2, color: "#FE2C55" },
@@ -30,6 +40,35 @@ export default function StreamMenuDialog({ open, onOpenChange, gameId = null }) 
   const [accounts, setAccounts] = useState({}); // { [platform]: { connected, username } }
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [busyPlatform, setBusyPlatform] = useState(null);
+
+  // Picks up the redirect back from the OAuth provider (via our backend's
+  // callback route) after the full-page navigation away and back. Runs
+  // regardless of `open` since the dialog may be closed/unmounted-from-view
+  // at the moment the page reloads.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connectedPlatform = params.get("stream_connected");
+    const erroredPlatform = params.get("stream_error");
+    if (!connectedPlatform && !erroredPlatform) return;
+
+    if (connectedPlatform) {
+      const label = PLATFORMS.find((p) => p.id === connectedPlatform)?.label || connectedPlatform;
+      toast.success(`${label} connected`);
+      onOpenChange(true);
+    } else if (erroredPlatform) {
+      const label = PLATFORMS.find((p) => p.id === erroredPlatform)?.label || erroredPlatform;
+      toast.error(`Unable to connect ${label}`);
+      onOpenChange(true);
+    }
+
+    params.delete("stream_connected");
+    params.delete("stream_error");
+    const newSearch = params.toString();
+    const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", newUrl);
+    // Reopening (above) flips `open` to true, which triggers the accounts
+    // fetch below and picks up the freshly-connected platform.
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +97,11 @@ export default function StreamMenuDialog({ open, onOpenChange, gameId = null }) 
     try {
       const res = await axios.post(
         `${API}/stream/${platformId}/connect`,
-        {},
+        // Where the backend should send the browser back to once OAuth
+        // finishes - just the current page, so this dialog is what the
+        // user sees again. This is NOT the provider's redirect_uri; the
+        // backend computes that itself from its own public URL.
+        { frontend_redirect: window.location.href },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data?.auth_url) {

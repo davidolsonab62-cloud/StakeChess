@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, Path as FastAPIPath
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -346,7 +346,10 @@ class StreamAccountResponse(BaseModel):
     connected_at: Optional[str] = None
 
 class StreamConnectRequest(BaseModel):
-    redirect_uri: Optional[str] = None
+    # Where to send the user's browser back to in the SPA once the OAuth
+    # dance finishes (e.g. window.location.href). This is NOT the OAuth
+    # redirect_uri - that's computed server-side, see _stream_oauth_redirect_uri.
+    frontend_redirect: Optional[str] = None
 
 class StreamGoLiveRequest(BaseModel):
     game_id: Optional[str] = None
@@ -2244,6 +2247,36 @@ async def get_watchable_games_count():
 # a socket event to the game room so spectators can see the match is being
 # broadcast live elsewhere.
 
+# The OAuth `redirect_uri` sent to each provider must be an exact match for
+# a URI registered in that provider's app console, AND it must be a URL the
+# provider will actually hand the auth code to - i.e. our own backend
+# callback route (this file), never the frontend. It is therefore computed
+# here from the backend's own public URL rather than trusted from the
+# frontend. Set BACKEND_BASE_URL explicitly in production (e.g.
+# https://your-api.onrender.com); Render also exposes RENDER_EXTERNAL_URL
+# automatically. FRONTEND_BASE_URL is only used as a fallback landing page
+# if the frontend doesn't tell us where to send the browser back to.
+BACKEND_BASE_URL = (
+    os.environ.get('BACKEND_BASE_URL')
+    or os.environ.get('RENDER_EXTERNAL_URL')
+    or 'http://localhost:8000'
+).rstrip('/')
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3000').rstrip('/')
+
+
+def _stream_oauth_redirect_uri(platform: str) -> str:
+    """The single, stable redirect_uri registered with each provider for
+    this platform. Must point at our backend callback route below."""
+    return f"{BACKEND_BASE_URL}/api/stream/{platform}/callback"
+
+
+def _append_query(url: str, **params: str) -> str:
+    """Appends query params to a URL that may already have its own query
+    string, without clobbering it."""
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}{urlencode(params)}"
+
+
 STREAM_OAUTH_CONFIG = {
     "tiktok": {
         "authorize_url": "https://www.tiktok.com/v2/auth/authorize",
@@ -2466,7 +2499,11 @@ async def connect_stream_account(platform: str, request: Request, body: StreamCo
     config = STREAM_OAUTH_CONFIG[platform]
     client_id = os.environ.get(config["client_id_env"])
     client_secret = os.environ.get(config["client_secret_env"])
-    redirect_uri = body.redirect_uri or f"http://localhost:3000/stream/{platform}/callback"
+    # This MUST be our own backend callback route (registered verbatim with
+    # the provider) - never a frontend URL, or the provider would hand the
+    # auth code straight to the SPA instead of to us for token exchange.
+    oauth_redirect_uri = _stream_oauth_redirect_uri(platform)
+    frontend_redirect = body.frontend_redirect or f"{FRONTEND_BASE_URL}/lobby"
 
     if client_id and client_secret:
         state = f"{user['user_id']}:{uuid.uuid4().hex}"
@@ -2474,12 +2511,12 @@ async def connect_stream_account(platform: str, request: Request, body: StreamCo
             "state": state,
             "user_id": user["user_id"],
             "platform": platform,
-            "redirect_uri": redirect_uri,
+            "frontend_redirect": frontend_redirect,
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
         params = {
             "client_id": client_id,
-            "redirect_uri": redirect_uri,
+            "redirect_uri": oauth_redirect_uri,
             "response_type": "code",
             "scope": config["scope"],
             "state": state,
@@ -2507,33 +2544,47 @@ async def connect_stream_account(platform: str, request: Request, body: StreamCo
 async def stream_oauth_callback(platform: str, request: Request):
     """Completes the real OAuth flow for platforms with credentials
     configured. The provider redirects here with `code` and our `state`."""
+    # The provider redirects the user's actual browser here (full-page
+    # navigation, not an XHR from the SPA) - so every exit from this handler
+    # must be an HTTP redirect back into the frontend, never a raw JSON/error
+    # response, or the user lands on an unstyled API response.
     platform = _require_valid_platform(platform)
     code = request.query_params.get("code")
     state = request.query_params.get("state")
+    default_landing = f"{FRONTEND_BASE_URL}/lobby"
+
     if not code or not state:
-        raise HTTPException(status_code=400, detail="Missing code or state")
+        return RedirectResponse(_append_query(default_landing, stream_error=platform))
 
     oauth_state = await db.stream_oauth_states.find_one({"state": state, "platform": platform}, {"_id": 0})
     if not oauth_state:
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+        return RedirectResponse(_append_query(default_landing, stream_error=platform))
+
+    frontend_redirect = oauth_state.get("frontend_redirect") or default_landing
 
     config = STREAM_OAUTH_CONFIG[platform]
     client_id = os.environ.get(config["client_id_env"])
     client_secret = os.environ.get(config["client_secret_env"])
     if not client_id or not client_secret:
-        raise HTTPException(status_code=503, detail=f"{platform} credentials not configured")
+        await db.stream_oauth_states.delete_one({"state": state})
+        return RedirectResponse(_append_query(frontend_redirect, stream_error=platform))
 
     try:
+        # Must be the exact same redirect_uri sent in the authorize request
+        # (see connect_stream_account) - providers validate it matches.
         token_data = _exchange_stream_code_for_token(
-            platform, code, oauth_state["redirect_uri"], client_id, client_secret
+            platform, code, _stream_oauth_redirect_uri(platform), client_id, client_secret
         )
     except requests.RequestException as e:
         logger.error(f"{platform} token exchange failed: {e}")
-        raise HTTPException(status_code=502, detail=f"{platform} token exchange failed")
+        await db.stream_oauth_states.delete_one({"state": state})
+        return RedirectResponse(_append_query(frontend_redirect, stream_error=platform))
 
     access_token = token_data.get("access_token")
     if not access_token:
-        raise HTTPException(status_code=502, detail=f"{platform} did not return an access token")
+        logger.error(f"{platform} did not return an access token")
+        await db.stream_oauth_states.delete_one({"state": state})
+        return RedirectResponse(_append_query(frontend_redirect, stream_error=platform))
 
     username = _fetch_stream_platform_username(platform, access_token)
     expires_in = token_data.get("expires_in")
@@ -2563,8 +2614,7 @@ async def stream_oauth_callback(platform: str, request: Request):
     )
     await db.stream_oauth_states.delete_one({"state": state})
 
-    frontend_redirect = oauth_state.get("redirect_uri") or "http://localhost:3000/lobby"
-    return JSONResponse({"redirect_url": frontend_redirect, "connected": True})
+    return RedirectResponse(_append_query(frontend_redirect, stream_connected=platform))
 
 
 @api_router.post("/stream/{platform}/go-live")
