@@ -65,7 +65,29 @@ function OverflowDebugOverlay() {
       }))
       .sort((a, b) => b.right - a.right)
       .slice(0, 10);
-    setReport({ innerWidth, scrollWidth, offenders, at: new Date().toLocaleTimeString() });
+
+    // Ancestor trace: start from a known deep element and walk up to <body>,
+    // printing each ancestor's own box, so we can see exactly which level
+    // first introduces extra width instead of every descendant reporting
+    // the same symptom.
+    const anchor =
+      document.querySelector('[data-testid="chess-board-container"]') ||
+      document.querySelector('[data-testid="opponent-timer"]');
+    const chain = [];
+    let node = anchor;
+    while (node && node !== document.body.parentElement) {
+      const r = node.getBoundingClientRect();
+      chain.push({
+        tag: node.tagName,
+        cls: (node.className || "").toString().slice(0, 70),
+        left: Math.round(r.left),
+        width: Math.round(r.width),
+        right: Math.round(r.right),
+      });
+      node = node.parentElement;
+    }
+
+    setReport({ innerWidth, scrollWidth, offenders, chain, at: new Date().toLocaleTimeString() });
   }, []);
 
   useEffect(() => {
@@ -121,6 +143,16 @@ function OverflowDebugOverlay() {
             <div key={i}>
               {i + 1}. {o.tag}
               {o.testid ? ` [${o.testid}]` : ""} right={o.right} width={o.width}{"\n"}   .{o.cls}
+            </div>
+          ))}
+        </>
+      )}
+      {report.chain && report.chain.length > 0 && (
+        <>
+          {"\n\n"}ancestor chain (anchor → body), width/left/right each level:
+          {report.chain.map((c, i) => (
+            <div key={i} style={{ color: c.right > report.innerWidth + 1 ? "#FF3B30" : "#888" }}>
+              {i}. {c.tag} left={c.left} width={c.width} right={c.right}{"\n"}   .{c.cls}
             </div>
           ))}
         </>
