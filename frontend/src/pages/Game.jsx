@@ -78,6 +78,7 @@ function OverflowDebugOverlay() {
     while (node && node !== document.body.parentElement) {
       const r = node.getBoundingClientRect();
       chain.push({
+        node,
         tag: node.tagName,
         cls: (node.className || "").toString().slice(0, 70),
         left: Math.round(r.left),
@@ -87,7 +88,23 @@ function OverflowDebugOverlay() {
       node = node.parentElement;
     }
 
-    setReport({ innerWidth, scrollWidth, offenders, chain, at: new Date().toLocaleTimeString() });
+    // Direct-children content-size check: for the level-1 ancestor (the
+    // "Main Game Area" wrapper), scrollWidth reveals each child's actual
+    // internal content size even though its rendered box already inherited
+    // the inflated width from its parent — this pinpoints which specific
+    // child is the one demanding more room than it was given.
+    const level1 = chain[1]?.node;
+    const childChecks = level1
+      ? [...level1.children].map((child) => ({
+          tag: child.tagName,
+          cls: (child.className || "").toString().slice(0, 60),
+          testid: child.getAttribute?.("data-testid") || "",
+          clientWidth: child.clientWidth,
+          scrollWidth: child.scrollWidth,
+        }))
+      : [];
+
+    setReport({ innerWidth, scrollWidth, offenders, chain, childChecks, at: new Date().toLocaleTimeString() });
   }, []);
 
   useEffect(() => {
@@ -153,6 +170,21 @@ function OverflowDebugOverlay() {
           {report.chain.map((c, i) => (
             <div key={i} style={{ color: c.right > report.innerWidth + 1 ? "#FF3B30" : "#888" }}>
               {i}. {c.tag} left={c.left} width={c.width} right={c.right}{"\n"}   .{c.cls}
+            </div>
+          ))}
+        </>
+      )}
+      {report.childChecks && report.childChecks.length > 0 && (
+        <>
+          {"\n\n"}direct children of level-1 (clientWidth vs scrollWidth):
+          {report.childChecks.map((c, i) => (
+            <div
+              key={i}
+              style={{ color: c.scrollWidth > c.clientWidth + 1 ? "#FF3B30" : "#888" }}
+            >
+              {i}. {c.tag}
+              {c.testid ? ` [${c.testid}]` : ""} client={c.clientWidth} scroll={c.scrollWidth}
+              {"\n"}   .{c.cls}
             </div>
           ))}
         </>
