@@ -1893,7 +1893,7 @@ export default function Game() {
 
             {/* Game Actions */}
             {!gameOver && game?.status === "active" && !isReplayMode && (
-              <div className="flex gap-3 mt-4">
+              <div className="flex flex-wrap gap-3 mt-4">
                 <Button
                   onClick={handleResign}
                   variant="outline"
