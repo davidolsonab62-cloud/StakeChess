@@ -1531,8 +1531,8 @@ export default function Game() {
             <div className={`flex items-center justify-between mb-3 bg-surface-1 border p-3 md:p-4 rounded-sm transition-all ${
               !isMyTurn && game?.status === "active" && !isReplayMode ? "border-brand shadow-[0_0_15px_rgba(212,175,55,0.2)]" : "border-hair"
             }`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-sm flex items-center justify-center ${
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-sm flex items-center justify-center shrink-0 ${
                   !isMyTurn && game?.status === "active" && !isReplayMode ? "bg-brand-dim" : "bg-surface-2"
                 }`}>
                   <span className={`font-bold text-lg ${
@@ -1541,13 +1541,13 @@ export default function Game() {
                     {opponent?.username?.charAt(0)?.toUpperCase() || "?"}
                   </span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-ink font-semibold text-sm md:text-base">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="text-ink font-semibold text-sm md:text-base truncate">
                       {opponent?.username || "Waiting..."}
                     </p>
                     {!isMyTurn && game?.status === "active" && !isReplayMode && (
-                      <span className="text-[10px] md:text-xs bg-brand-dim text-brand px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse">
+                      <span className="text-[10px] md:text-xs bg-brand-dim text-brand px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse shrink-0">
                         Thinking
                       </span>
                     )}
@@ -1558,7 +1558,7 @@ export default function Game() {
                 </div>
               </div>
               <div
-                className={`font-mono text-xl md:text-2xl font-bold px-3 md:px-4 py-2 rounded-sm transition-all ${
+                className={`font-mono text-xl md:text-2xl font-bold px-3 md:px-4 py-2 rounded-sm transition-all shrink-0 ${
                   !isMyTurn && game?.status === "active" && !isReplayMode
                     ? "bg-brand text-brand-on"
                     : "bg-surface-2 text-ink-secondary"
@@ -1702,8 +1702,8 @@ export default function Game() {
             <div className={`flex items-center justify-between mt-3 bg-surface-1 border p-3 md:p-4 rounded-sm transition-all ${
               isMyTurn && game?.status === "active" && !isReplayMode ? "border-success shadow-[0_0_15px_rgba(0,255,148,0.2)]" : "border-hair"
             }`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-sm flex items-center justify-center ${
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-sm flex items-center justify-center shrink-0 ${
                   isMyTurn && game?.status === "active" && !isReplayMode ? "bg-success-dim" : "bg-brand-dim"
                 }`}>
                   <span className={`font-bold text-lg ${
@@ -1712,13 +1712,13 @@ export default function Game() {
                     {user?.username?.charAt(0)?.toUpperCase() || "Y"}
                   </span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-ink font-semibold text-sm md:text-base">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="text-ink font-semibold text-sm md:text-base truncate">
                       {user?.username} (You)
                     </p>
                     {isMyTurn && game?.status === "active" && !isReplayMode && (
-                      <span className="text-[10px] md:text-xs bg-success-dim text-success px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                      <span className="text-[10px] md:text-xs bg-success-dim text-success px-2 py-0.5 rounded-sm uppercase tracking-wider shrink-0">
                         Your Turn
                       </span>
                     )}
@@ -1729,7 +1729,7 @@ export default function Game() {
                 </div>
               </div>
               <div
-                className={`font-mono text-xl md:text-2xl font-bold px-3 md:px-4 py-2 rounded-sm transition-all ${
+                className={`font-mono text-xl md:text-2xl font-bold px-3 md:px-4 py-2 rounded-sm transition-all shrink-0 ${
                   isMyTurn && game?.status === "active" && !isReplayMode
                     ? "bg-success text-brand-on"
                     : "bg-surface-2 text-ink-secondary"
