@@ -165,6 +165,36 @@ body {
     100% { left: 100%; }
 }
 
+/* Sonner toasts are `position: fixed` and animate with `transform` by
+   default. Combined, that's the same WebKit-only bug that hit the mobile
+   sidebar drawer: a `position: fixed` element that's ever given a
+   `transform` (even mid-animation, even off-screen) gets counted toward the
+   page's total scrollable width on iOS Safari, and since overflow-x is
+   hidden at the html/body level, the excess just silently eats the same
+   amount of width off the right edge of the whole page instead of showing a
+   scrollbar. This reproduces exactly when a toast fires (e.g. the "Opponent
+   joined" toast in Game.jsx) and does not reproduce on Android or in Chrome
+   DevTools, both of which use a different rendering engine. Forcing
+   transform off here and animating opacity instead keeps toasts visibly
+   animating in/out without ever putting a transform on a fixed ancestor. */
+[data-sonner-toaster] {
+    transform: none !important;
+}
+
+[data-sonner-toast] {
+    transform: none !important;
+    animation: none !important;
+    transition: opacity 0.2s ease !important;
+}
+
+[data-sonner-toast][data-mounted="true"] {
+    opacity: 1;
+}
+
+[data-sonner-toast][data-removed="true"] {
+    opacity: 0;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
