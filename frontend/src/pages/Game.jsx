@@ -1675,9 +1675,9 @@ export default function Game() {
       </div>
 
       <div className="overflow-hidden">
-        <div className="grid gap-4 md:gap-6 lg:grid-cols-[1fr,minmax(280px,320px)]">
+        <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-[minmax(0,1fr),minmax(280px,320px)]">
           {/* Main Game Area */}
-          <div>
+          <div className="min-w-0">
             {/* Opponent info */}
             <div className={`flex items-center justify-between mb-3 bg-surface-1 border p-3 md:p-4 rounded-sm transition-all ${
               !isMyTurn && game?.status === "active" && !isReplayMode ? "border-brand shadow-[0_0_15px_rgba(212,175,55,0.2)]" : "border-hair"
