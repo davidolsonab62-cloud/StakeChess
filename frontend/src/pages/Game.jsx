@@ -43,6 +43,92 @@ import { resolveBoardPrefs } from "@/utils/boardPrefs";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || window.location.origin;
 
+// TEMPORARY DEBUG TOOL — remove once the iOS clipping bug is found.
+// Safari on iOS has no on-device console without plugging into a Mac, so
+// this renders the same overflow diagnostic directly on screen instead.
+// Only activates with ?debug=1 in the URL — never shown to regular users.
+function OverflowDebugOverlay() {
+  const [report, setReport] = useState(null);
+
+  const scan = useCallback(() => {
+    const innerWidth = window.innerWidth;
+    const scrollWidth = document.documentElement.scrollWidth;
+    const offenders = [...document.querySelectorAll("*")]
+      .map((el) => ({ el, rect: el.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.right > innerWidth + 1)
+      .map(({ el, rect }) => ({
+        tag: el.tagName,
+        cls: (el.className || "").toString().slice(0, 60),
+        testid: el.getAttribute?.("data-testid") || "",
+        right: Math.round(rect.right),
+        width: Math.round(rect.width),
+      }))
+      .sort((a, b) => b.right - a.right)
+      .slice(0, 10);
+    setReport({ innerWidth, scrollWidth, offenders, at: new Date().toLocaleTimeString() });
+  }, []);
+
+  useEffect(() => {
+    scan();
+    const id = setInterval(scan, 1500);
+    return () => clearInterval(id);
+  }, [scan]);
+
+  if (!report) return null;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 999999,
+        maxHeight: "45vh",
+        overflowY: "auto",
+        background: "rgba(0,0,0,0.92)",
+        color: report.scrollWidth > report.innerWidth ? "#FF3B30" : "#00FF94",
+        fontFamily: "monospace",
+        fontSize: 10,
+        lineHeight: 1.4,
+        padding: "6px 8px",
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-all",
+      }}
+    >
+      <button
+        onClick={scan}
+        style={{
+          position: "absolute",
+          top: 4,
+          right: 6,
+          fontSize: 10,
+          color: "#fff",
+          background: "#333",
+          border: "none",
+          borderRadius: 4,
+          padding: "2px 6px",
+        }}
+      >
+        rescan
+      </button>
+      updated {report.at} — innerWidth: {report.innerWidth} scrollWidth: {report.scrollWidth}{" "}
+      {report.scrollWidth > report.innerWidth ? "OVERFLOW" : "clean"}
+      {report.offenders.length > 0 && (
+        <>
+          {"\n\n"}top offenders (right edge past viewport):
+          {report.offenders.map((o, i) => (
+            <div key={i}>
+              {i + 1}. {o.tag}
+              {o.testid ? ` [${o.testid}]` : ""} right={o.right} width={o.width}{"\n"}   .{o.cls}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Game() {
   const { gameId } = useParams();
   const location = useLocation();
@@ -1419,6 +1505,7 @@ export default function Game() {
 
   return (
     <div className="max-w-6xl mx-auto">
+      {searchParams.get("debug") === "1" && <OverflowDebugOverlay />}
       {/* In-page toolbar: back to lobby, pot, replay/live indicator, settings.
           The site nav itself now lives in AppShell/Sidebar. */}
       <div
