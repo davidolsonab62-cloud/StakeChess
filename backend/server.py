@@ -354,6 +354,12 @@ class StreamConnectRequest(BaseModel):
 class StreamGoLiveRequest(BaseModel):
     game_id: Optional[str] = None
 
+class StreamYoutubeCodeRequest(BaseModel):
+    # The one-time authorization code handed to the frontend's JS callback
+    # by the Google Identity Services popup (google.accounts.oauth2
+    # .initCodeClient with ux_mode: 'popup'). See connect_youtube_via_code.
+    code: str
+
 class WalletTransaction(BaseModel):
     model_config = ConfigDict(extra="ignore")
     tx_id: str
@@ -2286,11 +2292,23 @@ STREAM_OAUTH_CONFIG = {
         "scope": "user.info.basic,video.publish",
     },
     "instagram": {
-        "authorize_url": "https://api.instagram.com/oauth/authorize",
+        # NOTE: this must be www.instagram.com, not api.instagram.com.
+        # api.instagram.com/oauth/authorize was the Basic Display API's
+        # authorize endpoint - Meta sunset Basic Display on 2024-12-04 and it
+        # no longer works for personal accounts. The current "Instagram API
+        # with Instagram Login" (which the scopes below already target)
+        # authorizes at www.instagram.com/oauth/authorize; only token
+        # exchange stays on api.instagram.com. www.instagram.com is also the
+        # domain the Instagram app claims for universal links, so fixing
+        # this also lets the OS hand off to the installed app automatically
+        # on iOS/Android - no extra JS needed for that part.
+        "authorize_url": "https://www.instagram.com/oauth/authorize",
         "token_url": "https://api.instagram.com/oauth/access_token",
         "client_id_env": "INSTAGRAM_CLIENT_ID",
         "client_secret_env": "INSTAGRAM_CLIENT_SECRET",
         # Current Instagram API with Instagram Login (business login) scopes.
+        # Requires the connecting account to be a Business or Creator account
+        # - personal accounts are no longer supported by any Instagram API.
         "scope": "instagram_business_basic,instagram_business_content_publish",
     },
     "facebook": {
@@ -2540,6 +2558,42 @@ async def connect_stream_account(platform: str, request: Request, body: StreamCo
     return {"connected": True, "username": placeholder_username}
 
 
+async def _finalize_stream_connect(user_id: str, platform: str, token_data: dict) -> dict:
+    """Shared by both connect paths: the classic full-page OAuth redirect
+    (stream_oauth_callback) and the Google Identity Services popup flow
+    (connect_youtube_via_code). Fetches a display username, encrypts tokens
+    at rest, and upserts db.stream_accounts. Returns {connected, username}
+    for the caller to hand back to the frontend."""
+    access_token = token_data.get("access_token")
+    username = _fetch_stream_platform_username(platform, access_token) if access_token else None
+    expires_in = token_data.get("expires_in")
+    expires_at = (
+        (datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))).isoformat()
+        if expires_in else None
+    )
+
+    # Tokens are encrypted at rest with STREAM_TOKEN_ENCRYPTION_KEY (Fernet) -
+    # see encrypt_stream_token/decrypt_stream_token above. This collection
+    # holds live credentials that can post to a user's account, so treat it
+    # accordingly (never returned by /stream/accounts, decrypt only when
+    # actually calling out to the platform, e.g. in go_live).
+    await db.stream_accounts.update_one(
+        {"user_id": user_id, "platform": platform},
+        {"$set": {
+            "user_id": user_id,
+            "platform": platform,
+            "connected": True,
+            "username": username,
+            "access_token": encrypt_stream_token(access_token),
+            "refresh_token": encrypt_stream_token(token_data.get("refresh_token")),
+            "token_expires_at": expires_at,
+            "connected_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"connected": True, "username": username}
+
+
 @api_router.get("/stream/{platform}/callback")
 async def stream_oauth_callback(platform: str, request: Request):
     """Completes the real OAuth flow for platforms with credentials
@@ -2580,41 +2634,66 @@ async def stream_oauth_callback(platform: str, request: Request):
         await db.stream_oauth_states.delete_one({"state": state})
         return RedirectResponse(_append_query(frontend_redirect, stream_error=platform))
 
-    access_token = token_data.get("access_token")
-    if not access_token:
+    if not token_data.get("access_token"):
         logger.error(f"{platform} did not return an access token")
         await db.stream_oauth_states.delete_one({"state": state})
         return RedirectResponse(_append_query(frontend_redirect, stream_error=platform))
 
-    username = _fetch_stream_platform_username(platform, access_token)
-    expires_in = token_data.get("expires_in")
-    expires_at = (
-        (datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))).isoformat()
-        if expires_in else None
-    )
-
-    # Tokens are encrypted at rest with STREAM_TOKEN_ENCRYPTION_KEY (Fernet) -
-    # see encrypt_stream_token/decrypt_stream_token above. This collection
-    # holds live credentials that can post to a user's account, so treat it
-    # accordingly (never returned by /stream/accounts, decrypt only when
-    # actually calling out to the platform, e.g. in go_live).
-    await db.stream_accounts.update_one(
-        {"user_id": oauth_state["user_id"], "platform": platform},
-        {"$set": {
-            "user_id": oauth_state["user_id"],
-            "platform": platform,
-            "connected": True,
-            "username": username,
-            "access_token": encrypt_stream_token(access_token),
-            "refresh_token": encrypt_stream_token(token_data.get("refresh_token")),
-            "token_expires_at": expires_at,
-            "connected_at": datetime.now(timezone.utc).isoformat(),
-        }},
-        upsert=True,
-    )
+    await _finalize_stream_connect(oauth_state["user_id"], platform, token_data)
     await db.stream_oauth_states.delete_one({"state": state})
 
     return RedirectResponse(_append_query(frontend_redirect, stream_connected=platform))
+
+
+@api_router.get("/stream/youtube/client-id")
+async def get_youtube_client_id(request: Request):
+    """Public (auth-required, but non-secret) lookup so the frontend can
+    initialize Google Identity Services' popup code flow without embedding
+    the client ID at build time. OAuth client IDs are not secrets - only
+    YOUTUBE_CLIENT_SECRET is - so it's fine to hand this back as-is; the
+    actual token exchange still happens server-side in
+    connect_youtube_via_code below, using the secret."""
+    await get_current_user(request)
+    client_id = os.environ.get(STREAM_OAUTH_CONFIG["youtube"]["client_id_env"])
+    if not client_id:
+        raise HTTPException(status_code=503, detail="YouTube streaming is not configured")
+    return {"client_id": client_id, "scope": STREAM_OAUTH_CONFIG["youtube"]["scope"]}
+
+
+@api_router.post("/stream/youtube/connect-code")
+async def connect_youtube_via_code(request: Request, body: StreamYoutubeCodeRequest):
+    """Completes YouTube connect from the Google Identity Services popup
+    flow (see StreamMenuDialog.jsx). Unlike the other platforms, this is a
+    same-page XHR carrying a `code` handed to a JS callback by Google's
+    popup - not a full-page redirect - so there's no `state` row in
+    db.stream_oauth_states to look up and no HTTP redirect to issue; this
+    returns plain JSON like the placeholder/dev-mode path in
+    connect_stream_account does.
+    IMPORTANT: when the authorization code comes from GIS popup mode (no
+    redirect_uri was used - Google's popup relays it via postMessage), the
+    token exchange's redirect_uri parameter must be the literal string
+    "postmessage", not a URL. This is an undocumented-but-required Google
+    quirk; using an actual URL here throws a redirect_uri_mismatch."""
+    user = await get_current_user(request)
+    config = STREAM_OAUTH_CONFIG["youtube"]
+    client_id = os.environ.get(config["client_id_env"])
+    client_secret = os.environ.get(config["client_secret_env"])
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=503, detail="YouTube streaming is not configured")
+
+    try:
+        token_data = _exchange_stream_code_for_token(
+            "youtube", body.code, "postmessage", client_id, client_secret
+        )
+    except requests.RequestException as e:
+        logger.error(f"YouTube token exchange failed: {e}")
+        raise HTTPException(status_code=400, detail="Unable to connect YouTube")
+
+    if not token_data.get("access_token"):
+        logger.error("YouTube did not return an access token")
+        raise HTTPException(status_code=400, detail="Unable to connect YouTube")
+
+    return await _finalize_stream_connect(user["user_id"], "youtube", token_data)
 
 
 @api_router.post("/stream/{platform}/go-live")
