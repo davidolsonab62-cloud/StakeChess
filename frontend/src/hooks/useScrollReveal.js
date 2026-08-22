@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 // Containers whose *contents* should reveal piece by piece as the user
@@ -56,7 +56,7 @@ function findRevealTargets(root = document) {
 export function useScrollReveal() {
   const location = useLocation();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof IntersectionObserver === "undefined") {
       findRevealTargets().forEach((el) => {
         el.classList.add("sc-reveal", "sc-reveal-visible");
@@ -134,25 +134,21 @@ export function useScrollReveal() {
 
     // Route transitions (AnimatePresence's exit-before-enter, in
     // particular) can mount the new page's content a beat after this
-    // effect runs. Watch for it landing and attach reveal to it too,
-    // instead of only catching whatever existed the instant we fired.
-    // Scoped to #root (not document.body) and debounced via rAF so it
+    // effect runs — as can any async-loaded content (e.g. a page that
+    // shows a loading skeleton first). Watch for it landing and attach
+    // reveal to it too, instead of only catching whatever existed the
+    // instant we fired. Scoped to #root (not document.body) so it
     // doesn't re-scan on every portaled dialog/toast/dropdown mutation
-    // elsewhere in the app.
+    // elsewhere in the app. Runs the attach synchronously in the
+    // mutation callback (no requestAnimationFrame hop) so the reveal
+    // classes land in the same paint as the new content, rather than
+    // one frame after — otherwise the content briefly shows at full
+    // opacity, then visibly vanishes before fading back in.
     const appRoot = document.getElementById("root") || document.body;
-    let rafId = null;
-    const scheduleAttach = () => {
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        attach();
-      });
-    };
-    const mutationObserver = new MutationObserver(scheduleAttach);
+    const mutationObserver = new MutationObserver(attach);
     mutationObserver.observe(appRoot, { childList: true, subtree: true });
 
     return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
       mutationObserver.disconnect();
       observer.disconnect();
     };
