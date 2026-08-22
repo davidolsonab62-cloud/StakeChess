@@ -73,15 +73,17 @@ export default function Register() {
 
         {/* Register Card */}
         <div className="bg-surface-1 border border-hair p-8 rounded-2xl shadow-sm">
-          <h1
-            className="font-display font-bold text-2xl text-ink text-center mb-2"
-            data-testid="register-title"
-          >
-            Create Account
-          </h1>
-          <p className="text-ink-secondary text-center mb-8">
-            Start your journey to grandmaster
-          </p>
+          <div className="sc-reveal-stagger">
+            <h1
+              className="sc-reveal-item font-display font-bold text-2xl text-ink text-center mb-2"
+              data-testid="register-title"
+            >
+              Create Account
+            </h1>
+            <p className="sc-reveal-item text-ink-secondary text-center mb-8">
+              Start your journey to grandmaster
+            </p>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">

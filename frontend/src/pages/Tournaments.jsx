@@ -320,15 +320,15 @@ export default function Tournaments() {
         <div className="mb-2">
           <BackButton />
         </div>
-        <div className="text-center mb-8">
+        <div className="sc-reveal-stagger text-center mb-8">
           <h1
-            className="text-3xl font-bold mb-2"
+            className="sc-reveal-item text-3xl font-bold mb-2"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             data-testid="tournaments-title"
           >
             <span style={{ color: "var(--brand)" }}>Tournaments</span>
           </h1>
-          <p style={{ color: "var(--text-secondary)" }}>Compete for prizes in 24/7 tournaments</p>
+          <p className="sc-reveal-item" style={{ color: "var(--text-secondary)" }}>Compete for prizes in 24/7 tournaments</p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-3 mb-6">

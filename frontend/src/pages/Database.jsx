@@ -14,10 +14,12 @@ export default function DatabaseInfo() {
       <BackButton />
 
       <div className="mt-8">
-        <h1 className="text-4xl font-bold mb-2">StakeChess Database</h1>
-        <p style={{ color: "var(--text-secondary)" }} className="mb-8">
-          Comprehensive chess game library and player statistics
-        </p>
+        <div className="sc-reveal-stagger mb-8">
+          <h1 className="sc-reveal-item text-4xl font-bold mb-2">StakeChess Database</h1>
+          <p className="sc-reveal-item" style={{ color: "var(--text-secondary)" }}>
+            Comprehensive chess game library and player statistics
+          </p>
+        </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           {stats.map((stat, i) => {

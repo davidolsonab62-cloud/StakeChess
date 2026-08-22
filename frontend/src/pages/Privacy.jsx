@@ -6,10 +6,12 @@ export default function Privacy() {
       <BackButton />
 
       <div className="mt-8">
-        <h1 className="text-4xl font-bold mb-2">Privacy Policy</h1>
-        <p style={{ color: "var(--text-secondary)" }} className="mb-8">
-          Last updated: August 14, 2026
-        </p>
+        <div className="sc-reveal-stagger mb-8">
+          <h1 className="sc-reveal-item text-4xl font-bold mb-2">Privacy Policy</h1>
+          <p className="sc-reveal-item" style={{ color: "var(--text-secondary)" }}>
+            Last updated: August 14, 2026
+          </p>
+        </div>
 
         <div className="space-y-8">
           <section>

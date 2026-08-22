@@ -380,11 +380,11 @@ export default function Profile() {
           <input ref={fileInputRef} type="file" accept="image/*" onChange={onPickAvatar} className="hidden" />
         </div>
 
-        <div className="text-center md:text-left flex-1">
-          <h1 className="font-display font-bold text-2xl mb-1" data-testid="profile-username">
+        <div className="sc-reveal-stagger text-center md:text-left flex-1">
+          <h1 className="sc-reveal-item font-display font-bold text-2xl mb-1" data-testid="profile-username">
             {displayUser?.username}
           </h1>
-          <p style={{ color: "var(--text-secondary)" }}>{displayUser?.email}</p>
+          <p className="sc-reveal-item" style={{ color: "var(--text-secondary)" }}>{displayUser?.email}</p>
           <div className="flex items-center gap-2 justify-center md:justify-start mt-2 flex-wrap">
             {displayUser?.is_admin && (
               <span

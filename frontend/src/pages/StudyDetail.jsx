@@ -66,9 +66,9 @@ export default function StudyDetail() {
       <div className="mb-2">
         <BackButton />
       </div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-heading">{study.title}</h1>
-        <div className="text-sm text-ink-secondary">{study.category}</div>
+      <div className="sc-reveal-stagger mb-4">
+        <h1 className="sc-reveal-item text-2xl font-heading">{study.title}</h1>
+        <div className="sc-reveal-item text-sm text-ink-secondary">{study.category}</div>
       </div>
 
       <div className="grid gap-6">

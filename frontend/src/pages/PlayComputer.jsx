@@ -704,14 +704,14 @@ export default function PlayComputer() {
     return (
       <div>
         <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
+        <div className="sc-reveal-stagger text-center mb-8">
+          <div className="sc-reveal-item flex items-center justify-center gap-3 mb-4">
             <Cpu className="w-12 h-12" style={{ color: "var(--brand)" }} />
           </div>
-          <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h1 className="sc-reveal-item text-3xl font-bold mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             Play vs computer
           </h1>
-          <p style={{ color: "var(--text-secondary)" }}>Practice your skills against our AI opponent</p>
+          <p className="sc-reveal-item" style={{ color: "var(--text-secondary)" }}>Practice your skills against our AI opponent</p>
         </div>
 
           {/* Position Analysis — shown when a custom position was loaded (e.g. via "Next" from Board Editor) */}

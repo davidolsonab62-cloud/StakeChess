@@ -1,29 +1,71 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
+// Containers whose *contents* should reveal piece by piece as the user
+// scrolls, rather than the container itself revealing as one lump.
+const CONTENT_SELECTORS = [
+  "main > *",
+  ".sc-page > *",
+  ".min-h-screen > *",
+  "section > *",
+];
+
+// A handful of whole blocks that are meant to reveal as a single unit
+// (not decomposed into their children).
+const BLOCK_SELECTORS = [".sc-hero"];
+
+// An element marked .sc-reveal-stagger reveals its tagged .sc-reveal-item
+// descendants one after another (heading, then subtext, then a CTA, say)
+// once the group scrolls into view, instead of the whole group fading in
+// as a single block. Items are found by document order, however deeply
+// they're nested, so this doesn't depend on them being direct siblings.
+const STAGGER_GROUP_SELECTOR = ".sc-reveal-stagger";
+const STAGGER_ITEM_SELECTOR = ".sc-reveal-item";
+const STAGGER_DELAY_STEP_MS = 90;
+const STAGGER_MAX_ITEMS = 6;
+
+function findStaggerGroups(root = document) {
+  return Array.from(root.querySelectorAll(STAGGER_GROUP_SELECTOR)).filter(
+    (el) => !el.classList.contains("sc-no-reveal")
+  );
+}
+
+function findRevealTargets(root = document) {
+  const matched = Array.from(
+    new Set(
+      root.querySelectorAll(
+        [...CONTENT_SELECTORS, ...BLOCK_SELECTORS].join(", ")
+      )
+    )
+  ).filter(
+    (el) =>
+      !el.classList.contains("sc-no-reveal") &&
+      !el.classList.contains("sc-reveal-stagger") &&
+      !el.closest(STAGGER_GROUP_SELECTOR)
+  );
+
+  // Prefer the most granular matched element: if a matched node contains
+  // another matched node, drop the outer one so we reveal the actual
+  // piece of content instead of a wrapper around it (and its contents)
+  // fading in twice.
+  return matched.filter(
+    (el) => !matched.some((other) => other !== el && el.contains(other))
+  );
+}
+
 export function useScrollReveal() {
   const location = useLocation();
 
   useEffect(() => {
-    const autoAttach = () => {
-      const selectors = [
-        "main > *",
-        ".sc-page",
-        ".min-h-screen > *",
-        ".sc-hero",
-      ];
-      const nodes = Array.from(
-        document.querySelectorAll(selectors.join(", "))
-      ).filter((el) => !el.classList.contains("sc-no-reveal"));
-      nodes.forEach((el) => el.classList.add("sc-reveal"));
-      return nodes;
-    };
-
-    const elements = autoAttach();
-    if (elements.length === 0) return;
-
     if (typeof IntersectionObserver === "undefined") {
-      elements.forEach((el) => el.classList.add("sc-reveal-visible"));
+      findRevealTargets().forEach((el) => {
+        el.classList.add("sc-reveal", "sc-reveal-visible");
+      });
+      findStaggerGroups().forEach((group) => {
+        group.querySelectorAll(STAGGER_ITEM_SELECTOR).forEach((item) => {
+          item.classList.add("sc-reveal", "sc-reveal-visible");
+        });
+      });
       return;
     }
 
@@ -42,8 +84,77 @@ export function useScrollReveal() {
       }
     );
 
-    elements.forEach((el) => observer.observe(el));
+    const seenTargets = new WeakSet();
+    const seenGroups = new WeakSet();
 
-    return () => observer.disconnect();
+    const attachStaggerGroups = () => {
+      findStaggerGroups().forEach((group) => {
+        if (seenGroups.has(group)) return;
+        seenGroups.add(group);
+
+        const items = Array.from(
+          group.querySelectorAll(STAGGER_ITEM_SELECTOR)
+        ).slice(0, STAGGER_MAX_ITEMS);
+        if (items.length === 0) return;
+
+        items.forEach((item, i) => {
+          item.classList.add("sc-reveal");
+          item.style.transitionDelay = `${i * STAGGER_DELAY_STEP_MS}ms`;
+        });
+
+        // One trigger for the whole group: once it's in view, every
+        // tagged item reveals together, staggered by the delay set above.
+        const groupObserver = new IntersectionObserver(
+          (entries, obs) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                items.forEach((item) => item.classList.add("sc-reveal-visible"));
+                obs.disconnect();
+              }
+            });
+          },
+          { threshold: 0.1, rootMargin: "0px 0px -10% 0px" }
+        );
+        groupObserver.observe(group);
+      });
+    };
+
+    const attach = () => {
+      attachStaggerGroups();
+      findRevealTargets().forEach((el) => {
+        if (seenTargets.has(el)) return;
+        seenTargets.add(el);
+        el.classList.add("sc-reveal");
+        observer.observe(el);
+      });
+    };
+
+    // Initial pass for content that's already mounted.
+    attach();
+
+    // Route transitions (AnimatePresence's exit-before-enter, in
+    // particular) can mount the new page's content a beat after this
+    // effect runs. Watch for it landing and attach reveal to it too,
+    // instead of only catching whatever existed the instant we fired.
+    // Scoped to #root (not document.body) and debounced via rAF so it
+    // doesn't re-scan on every portaled dialog/toast/dropdown mutation
+    // elsewhere in the app.
+    const appRoot = document.getElementById("root") || document.body;
+    let rafId = null;
+    const scheduleAttach = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        attach();
+      });
+    };
+    const mutationObserver = new MutationObserver(scheduleAttach);
+    mutationObserver.observe(appRoot, { childList: true, subtree: true });
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      mutationObserver.disconnect();
+      observer.disconnect();
+    };
   }, [location.pathname]);
 }

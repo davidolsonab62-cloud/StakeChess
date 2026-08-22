@@ -305,7 +305,7 @@ export default function Landing() {
       {/* ---------------- Hero card ---------------- */}
       <section className="max-w-6xl mx-auto px-5 md:px-8 pt-7 md:pt-10">
         <div
-          className="sc-page sc-hero relative overflow-hidden rounded-3xl"
+          className="sc-page sc-hero sc-reveal-stagger relative overflow-hidden rounded-3xl"
           style={{
             background: isDark
               ? "linear-gradient(150deg, #171233 0%, #0E0B20 55%, #14102B 100%)"
@@ -334,22 +334,24 @@ export default function Landing() {
                 />
               </div>
               
-              <h1 className="font-display font-bold text-[42px] md:text-[58px] leading-[1.02] tracking-tight">
+              <h1 className="sc-reveal-item font-display font-bold text-[42px] md:text-[58px] leading-[1.02] tracking-tight">
                 <span style={{ color: isDark ? "white" : "black" }}>STAKE.</span>{" "}
                 <span style={{ color: "var(--brand)" }}>PLAY.</span>{" "}
                 <span style={{ color: "var(--green)" }}>WIN.</span>
               </h1>
 
-              <p className="sc-hero-sub mt-3 text-[13px] md:text-[14px] tracking-wider font-medium" style={{ color: "var(--text-secondary)", letterSpacing: "0.15em" }}>
-                STAKE • PLAY • WIN
-              </p>
+              <div className="sc-reveal-item">
+                <p className="sc-hero-sub mt-3 text-[13px] md:text-[14px] tracking-wider font-medium" style={{ color: "var(--text-secondary)", letterSpacing: "0.15em" }}>
+                  STAKE • PLAY • WIN
+                </p>
 
-              <p className="sc-hero-sub mt-5 text-[15px] md:text-[16px] leading-relaxed max-w-[440px]">
-                The premier real-time chess platform where skill meets stakes. Challenge opponents,
-                wager crypto, and prove you're the grandmaster.
-              </p>
+                <p className="sc-hero-sub mt-5 text-[15px] md:text-[16px] leading-relaxed max-w-[440px]">
+                  The premier real-time chess platform where skill meets stakes. Challenge opponents,
+                  wager crypto, and prove you're the grandmaster.
+                </p>
+              </div>
 
-              <div className="mt-7 flex flex-wrap gap-3">
+              <div className="sc-reveal-item mt-7 flex flex-wrap gap-3">
                 <MotionButton
                   onClick={() => go(user ? "/lobby" : "/login")}
                   className="font-semibold px-6 h-12 rounded-xl text-[13.5px] tracking-wide"

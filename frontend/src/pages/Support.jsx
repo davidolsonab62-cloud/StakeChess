@@ -42,12 +42,12 @@ export default function Support() {
       <BackButton />
 
       <div className="mt-8 rounded-2xl border border-hair bg-surface-1 p-6 md:p-8 shadow-sm">
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] mb-3" style={{ color: "var(--brand)" }}>
+        <div className="sc-reveal-stagger mb-8">
+          <p className="sc-reveal-item text-sm font-semibold uppercase tracking-[0.18em] mb-3" style={{ color: "var(--brand)" }}>
             Customer Support
           </p>
-          <h1 className="text-3xl md:text-4xl font-bold">How can we help?</h1>
-          <p className="mt-3 text-base" style={{ color: "var(--text-secondary)" }}>
+          <h1 className="sc-reveal-item text-3xl md:text-4xl font-bold">How can we help?</h1>
+          <p className="sc-reveal-item mt-3 text-base" style={{ color: "var(--text-secondary)" }}>
             Introduce yourself, describe the issue, and send your message directly to our support team.
           </p>
         </div>

@@ -87,15 +87,15 @@ export default function Leaderboard() {
         <div className="mb-2">
           <BackButton />
         </div>
-        <div className="text-center mb-8">
+        <div className="sc-reveal-stagger text-center mb-8">
           <h1
-            className="text-3xl font-bold mb-2"
+            className="sc-reveal-item text-3xl font-bold mb-2"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             data-testid="leaderboard-title"
           >
             <span style={{ color: "var(--brand)" }}>Leaderboard</span>
           </h1>
-          <p style={{ color: "var(--text-secondary)" }}>The best players on StakeChess</p>
+          <p className="sc-reveal-item" style={{ color: "var(--text-secondary)" }}>The best players on StakeChess</p>
         </div>
 
         <Tabs
