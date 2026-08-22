@@ -96,7 +96,7 @@ function PlayTile({ icon: Icon, title, subtitle, tint, onClick }) {
   return (
     <motion.button
       onClick={onClick}
-      className="text-left rounded-2xl p-5 w-full"
+      className="sc-reveal-item text-left rounded-2xl p-5 w-full"
       style={{
         /* subtle colour wash per tile, like the reference */
         background: `linear-gradient(150deg, ${tint.bg} 0%, var(--surface-1) 62%)`,
@@ -325,7 +325,7 @@ export default function Landing() {
 
           <div className="relative grid md:grid-cols-[1.02fr,1fr] gap-8 items-center pl-6 md:pl-12 pt-10 md:pt-14 pr-6 md:pr-0">
             <div className="pb-2">
-              <div className="mb-6 flex items-center gap-3 flex-wrap">
+              <div className="sc-reveal-item mb-6 flex items-center gap-3 flex-wrap">
                 <img
                   src={LOGO_URL}
                   alt="StakeChess branding"
@@ -446,14 +446,14 @@ export default function Landing() {
 
 
       {/* ---------------- Play your way ---------------- */}
-      <section className="max-w-6xl mx-auto px-5 md:px-8 pt-9 pb-16">
+      <section className="sc-reveal-stagger max-w-6xl mx-auto px-5 md:px-8 pt-9 pb-16">
         <h2
-          className="text-[12px] font-semibold uppercase tracking-[0.14em] mb-4"
+          className="sc-reveal-item text-[12px] font-semibold uppercase tracking-[0.14em] mb-4"
           style={{ color: "var(--text-secondary)" }}
         >
           Play your way
         </h2>
-        <div className="sc-stagger grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <PlayTile
             icon={Zap}
             title="Play online"
