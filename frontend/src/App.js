@@ -105,6 +105,23 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+  const refreshUser = useCallback(async () => {
+    // Re-fetches the current user (rating, wallet, games_played, etc.) without
+    // touching the global `loading` flag, so it's safe to call from any page
+    // (e.g. Lobby, after returning from a finished game) without flashing the
+    // ProtectedRoute spinner.
+    if (!token) return;
+    try {
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+      setUser(response.data);
+    } catch (error) {
+      console.error("Failed to refresh user", error);
+    }
+  }, [token]);
+
   const checkAuth = useCallback(async () => {
     // CRITICAL: If returning from OAuth callback, skip the /me check.
     const hasOAuthSession = window.location.search?.includes("session_id=") || window.location.hash?.includes("session_id=");
@@ -353,7 +370,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, loading, login, register, logout, updateUser, checkAuth, pendingChallengeCount, refreshPendingChallenges, watchableMatchCount, refreshWatchableMatches, puzzleProgress, refreshPuzzleProgress }}
+      value={{ user, token, loading, login, register, logout, updateUser, checkAuth, refreshUser, pendingChallengeCount, refreshPendingChallenges, watchableMatchCount, refreshWatchableMatches, puzzleProgress, refreshPuzzleProgress }}
     >
       {children}
       <Dialog open={!!incomingChallenge} onOpenChange={(open) => !open && setIncomingChallenge(null)}>

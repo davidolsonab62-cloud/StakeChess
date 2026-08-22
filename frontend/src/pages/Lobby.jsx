@@ -67,7 +67,7 @@ const formatCountdown = (seconds) => {
 };
 
 export default function Lobby() {
-  const { user, token } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,14 +123,17 @@ export default function Lobby() {
   const fetchGames = useCallback(async () => {
     try {
       // Include waiting and active games so ongoing matches are visible for reconnection
-      const response = await axios.get(`${API}/games?status=waiting,active`);
+      const response = await axios.get(`${API}/games?status=waiting,active`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       setGames(response.data);
     } catch (error) {
       console.error("Failed to fetch games:", error);
+      toast.error("Couldn't refresh games list");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   // Check for active game on mount
   useEffect(() => {
@@ -218,9 +221,13 @@ export default function Lobby() {
 
   useEffect(() => {
     fetchGames();
-    const interval = setInterval(fetchGames, 5000);
+    refreshUser();
+    const interval = setInterval(() => {
+      fetchGames();
+      refreshUser();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [fetchGames]);
+  }, [fetchGames, refreshUser]);
 
   const refreshGames = async () => {
     setRefreshing(true);
