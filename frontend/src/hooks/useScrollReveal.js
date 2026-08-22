@@ -79,7 +79,14 @@ export function useScrollReveal() {
         });
       },
       {
-        threshold: 0.1,
+        // threshold: 0 fires as soon as any part of the target is
+        // visible, rather than requiring a *fraction* of its own height
+        // to be onscreen. A ratio-based threshold (e.g. 0.1) silently
+        // breaks for content whose height scales with data - a games
+        // list that grows to, say, 7000px tall will never show 10% of
+        // itself at once on an ordinary viewport, so it would sit at
+        // opacity: 0 forever no matter how far you scroll.
+        threshold: 0,
         rootMargin: "0px 0px -10% 0px",
       }
     );
@@ -113,7 +120,7 @@ export function useScrollReveal() {
               }
             });
           },
-          { threshold: 0.1, rootMargin: "0px 0px -10% 0px" }
+          { threshold: 0, rootMargin: "0px 0px -10% 0px" }
         );
         groupObserver.observe(group);
       });

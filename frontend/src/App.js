@@ -323,7 +323,14 @@ export const AuthProvider = ({ children }) => {
         // ignore
       }
     };
-  }, [user, token]);
+    // Depend on the specific fields this effect actually reads, not the
+    // whole `user` object. refreshUser() (polled every 5s from Lobby and
+    // elsewhere) calls setUser() with a brand-new object each time, even
+    // when nothing meaningful changed - depending on `user` by reference
+    // was tearing the socket down and recreating it on every poll cycle,
+    // which is what produced the repeated "Socket connected and joined
+    // user room" logs and the interleaved polling-transport 400s.
+  }, [user?.user_id, user?.is_admin, token]);
 
   const login = async (email, password) => {
     const response = await axios.post(

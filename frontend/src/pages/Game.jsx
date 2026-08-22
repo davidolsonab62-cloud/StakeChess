@@ -384,7 +384,7 @@ export default function Game() {
       toast.error("Failed to load game");
       navigate("/lobby");
     }
-  }, [gameId, user, navigate, reviewMode, fetchAnalysis, token, isImportedPgn, importedPgnParam, decodePGNParam, loadImportedPGN]);
+  }, [gameId, user?.user_id, navigate, reviewMode, fetchAnalysis, token, isImportedPgn, importedPgnParam, decodePGNParam, loadImportedPGN]);
 
   // Initialize socket with robust reconnection for real-time sync
   useEffect(() => {
