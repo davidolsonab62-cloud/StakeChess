@@ -1,9 +1,54 @@
-import { useState, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useLocation, useOutlet } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "@/components/layout/Sidebar";
 import { useTheme } from "@/context/ThemeContext";
 
 const STORAGE_KEY = "stakechess-sidebar-collapsed";
+
+// Matches Tailwind's `lg` breakpoint used for the sidebar's fixed/static
+// switch — the drawer (and its swipe gestures) only apply below this.
+const LG_BREAKPOINT_QUERY = "(min-width: 1024px)";
+// How close to the left edge a touch has to start to count as "opening the
+// drawer" rather than an ordinary tap/scroll/swipe elsewhere on the page.
+const EDGE_ZONE_PX = 24;
+const OPEN_LOCK_PX = 10;
+const OPEN_DOMINANCE_RATIO = 1.2;
+const OPEN_THRESHOLD_PX = 60;
+
+// Same fade-through + subtle scale as the top-level route transition in
+// App.js (kept in sync with those values), applied here for navigation
+// *within* the shell — lobby -> puzzles, etc. — so the sidebar/topbar stay
+// mounted and only the content area transitions.
+const PAGE_ENTER = { opacity: 1, scale: 1, transition: { duration: 0.22, ease: "easeOut" } };
+const PAGE_EXIT = { opacity: 0, scale: 0.98, transition: { duration: 0.18, ease: "easeIn" } };
+const PAGE_INITIAL = { opacity: 0, scale: 0.98 };
+
+/**
+ * Renders the current nested route's element (in place of a plain
+ * <Outlet />) wrapped in a fade-through/scale transition keyed by the
+ * pathname, so switching between shell pages animates without remounting
+ * AppShell itself. `useOutlet()` gives the already-resolved element for the
+ * current match, same as <Outlet /> would render, just accessible for
+ * wrapping.
+ */
+function AnimatedOutlet() {
+  const location = useLocation();
+  const element = useOutlet();
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={location.pathname}
+        initial={PAGE_INITIAL}
+        animate={PAGE_ENTER}
+        exit={PAGE_EXIT}
+      >
+        {element}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 /**
  * Shared shell for authenticated pages: collapsible sidebar + content area.
@@ -35,6 +80,83 @@ export default function AppShell() {
   useEffect(() => {
     setMobileNavOpen(false);
   }, [location.pathname]);
+
+  // Edge-swipe-to-open: the drawer itself is off-canvas while closed, so it
+  // can't receive the touch that opens it — that has to be listened for on
+  // the page instead. Scoped to a slim strip at the left edge and to a
+  // rightward, horizontally-dominant drag, so it never fires from an
+  // ordinary tap or vertical scroll anywhere else on the page. Desktop
+  // (lg+) uses a static sidebar with no drawer, so this stays off there.
+  const isDesktopRef = useRef(
+    typeof window !== "undefined" ? window.matchMedia(LG_BREAKPOINT_QUERY).matches : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(LG_BREAKPOINT_QUERY);
+    const onChange = () => {
+      isDesktopRef.current = mq.matches;
+    };
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const drag = { active: false, locked: false, opening: false, startX: 0, startY: 0 };
+
+    const onTouchStart = (e) => {
+      if (isDesktopRef.current || mobileNavOpen) return;
+      const t = e.touches[0];
+      if (t.clientX > EDGE_ZONE_PX) return;
+      drag.active = true;
+      drag.locked = false;
+      drag.opening = false;
+      drag.startX = t.clientX;
+      drag.startY = t.clientY;
+    };
+
+    const onTouchMove = (e) => {
+      if (!drag.active) return;
+      const t = e.touches[0];
+      const dx = t.clientX - drag.startX;
+      const dy = t.clientY - drag.startY;
+
+      if (!drag.locked) {
+        if (Math.abs(dx) < OPEN_LOCK_PX && Math.abs(dy) < OPEN_LOCK_PX) return;
+        drag.locked = true;
+        // Only a rightward, horizontally-dominant drag counts as "open the
+        // drawer" — anything else (leftward, vertical) is left completely
+        // alone so page scrolling near the edge is never disturbed.
+        drag.opening = dx > 0 && Math.abs(dx) > Math.abs(dy) * OPEN_DOMINANCE_RATIO;
+      }
+      if (!drag.opening) return;
+
+      e.preventDefault();
+      if (dx > OPEN_THRESHOLD_PX) {
+        setMobileNavOpen(true);
+        drag.active = false;
+        drag.opening = false;
+      }
+    };
+
+    const onTouchEnd = () => {
+      drag.active = false;
+      drag.opening = false;
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [mobileNavOpen]);
 
   return (
     <div className="flex min-h-screen" style={{ background: "var(--surface-0)", color: "var(--text-primary)" }}>
@@ -87,7 +209,7 @@ export default function AppShell() {
         </div>
 
         <main className="flex-1 min-w-0 px-5 py-6 md:px-8 md:py-7">
-          <Outlet />
+          <AnimatedOutlet />
         </main>
       </div>
     </div>

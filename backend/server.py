@@ -1972,10 +1972,40 @@ async def create_oauth_session_test(request: Request):
 
 # ============= GAME ROUTES =============
 
+# ============= GAME CREATION RATE LIMITING =============
+# Simple in-memory sliding-window limiter: caps how many games a single
+# account can create in a rolling window. This is intentionally in-process
+# (not Redis-backed) - fine for a single-server deployment, and cheap enough
+# to add without a new dependency. If you run multiple API processes/workers,
+# swap this for a shared store (Redis INCR + TTL) so the limit is enforced
+# across all of them instead of per-process.
+GAME_CREATION_RATE_LIMIT = 5          # max games per user...
+GAME_CREATION_RATE_WINDOW_SECONDS = 60  # ...per rolling window
+_game_creation_timestamps: dict[str, list[float]] = {}
+
+
+def _enforce_game_creation_rate_limit(user_id: str) -> None:
+    now = datetime.now(timezone.utc).timestamp()
+    window_start = now - GAME_CREATION_RATE_WINDOW_SECONDS
+
+    recent = [ts for ts in _game_creation_timestamps.get(user_id, []) if ts > window_start]
+
+    if len(recent) >= GAME_CREATION_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many games created - limit is {GAME_CREATION_RATE_LIMIT} per {GAME_CREATION_RATE_WINDOW_SECONDS}s. Please wait and try again.",
+        )
+
+    recent.append(now)
+    _game_creation_timestamps[user_id] = recent
+
+
 @api_router.post("/games", response_model=GameResponse)
 async def create_game(game_data: GameCreate, request: Request):
     user = await get_current_user(request)
-    
+
+    _enforce_game_creation_rate_limit(user["user_id"])
+
     parts = game_data.time_control.split("+")
     base_time = int(parts[0]) * 60
     

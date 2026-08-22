@@ -1,7 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { motion, useMotionValue, animate, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/App";
 import PlayMenuDialog from "@/components/play/PlayMenuDialog";
+
+/* Swipe-to-close tuning for the mobile drawer. A drag must clear both a
+   minimum lock distance (so a normal vertical scroll on the nav list is
+   never mistaken for a swipe) and a horizontal dominance ratio before it's
+   treated as a close gesture; preventDefault only kicks in once we've
+   actually locked into that gesture, so scrolling is never interrupted. */
+const SWIPE_LOCK_PX = 10;
+const SWIPE_DOMINANCE_RATIO = 1.2;
+const SWIPE_CLOSE_RATIO = 0.35; // fraction of drawer width to commit a close
+const SWIPE_CLOSE_VELOCITY = 0.6; // px/ms — a fast flick closes regardless of distance
 
 const ICON_LOGO_URL = "/stakechess-icon.png";
 const FULL_LOGO_URL = "/stakechess-logo.png";
@@ -48,13 +59,125 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
   const [aboutOpen, setAboutOpen] = useState(false);
   const [playDialogOpen, setPlayDialogOpen] = useState(false);
   const location = useLocation();
+  const prefersReducedMotion = useReducedMotion();
 
   const rowBase =
     "flex items-center gap-3 rounded-[9px] px-3 py-2.5 text-[14px] font-medium no-underline transition-colors sc-nav-row";
 
+  const drawerWidth = compact ? 68 : 216;
+  const settleTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { type: "spring", stiffness: 380, damping: 38 };
+
+  // `left` (not transform) on purpose — see the note on the <aside> below,
+  // the same WebKit off-canvas-width bug applies to a drag-driven position.
+  const leftMV = useMotionValue(mobileOpen ? 0 : -drawerWidth);
+  const isMountedRef = useRef(false);
+  const asideRef = useRef(null);
+  const dragRef = useRef({ dragging: false, locked: false, startX: 0, startY: 0, startLeft: 0, lastX: 0, lastT: 0 });
+
+  // Keep the motion value in sync whenever the drawer is opened/closed from
+  // outside a drag (hamburger tap, route change, desktop collapse toggle).
+  // Skipped mid-drag so our own finger tracking below isn't fought over.
+  useEffect(() => {
+    if (dragRef.current.dragging) return;
+    const target = mobileOpen ? 0 : -drawerWidth;
+    if (!isMountedRef.current) {
+      leftMV.set(target);
+      isMountedRef.current = true;
+      return;
+    }
+    animate(leftMV, target, settleTransition);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobileOpen, drawerWidth]);
+
+  // Swipe-to-close: only meaningful on the open, on-screen drawer (a closed
+  // drawer sits off-canvas and can't receive touches). Attached as native
+  // listeners so touchmove can call preventDefault once a horizontal swipe
+  // is confirmed — React's synthetic touch handlers are passive by default
+  // and can't stop the page scrolling underneath a locked gesture.
+  useEffect(() => {
+    const el = asideRef.current;
+    if (!el || !mobileOpen) return;
+
+    const onTouchStart = (e) => {
+      const t = e.touches[0];
+      dragRef.current = {
+        dragging: false,
+        locked: false,
+        startX: t.clientX,
+        startY: t.clientY,
+        startLeft: leftMV.get(),
+        lastX: t.clientX,
+        lastT: e.timeStamp,
+      };
+    };
+
+    const onTouchMove = (e) => {
+      const d = dragRef.current;
+      const t = e.touches[0];
+      const dx = t.clientX - d.startX;
+      const dy = t.clientY - d.startY;
+
+      if (!d.locked) {
+        if (Math.abs(dx) < SWIPE_LOCK_PX && Math.abs(dy) < SWIPE_LOCK_PX) return;
+        // Only lock into a close-swipe for a leftward, horizontally-dominant
+        // drag. Anything else (rightward, vertical) is left alone so the
+        // nav list keeps scrolling normally.
+        if (dx < 0 && Math.abs(dx) > Math.abs(dy) * SWIPE_DOMINANCE_RATIO) {
+          d.locked = true;
+          d.dragging = true;
+        } else {
+          d.locked = true;
+          d.dragging = false; // locked "out" — a scroll, not our gesture
+        }
+      }
+      if (!d.dragging) return;
+
+      e.preventDefault();
+      const next = Math.min(0, Math.max(-drawerWidth, d.startLeft + dx));
+      leftMV.set(next);
+      d.lastX = t.clientX;
+      d.lastT = e.timeStamp;
+    };
+
+    const onTouchEnd = (e) => {
+      const d = dragRef.current;
+      if (!d.dragging) return;
+      d.dragging = false;
+
+      const endT = e.timeStamp || Date.now();
+      const elapsed = Math.max(1, endT - d.lastT);
+      const velocity = (d.lastX - d.startX) / elapsed; // px/ms, negative = leftward
+      const draggedRatio = Math.abs(Math.min(0, leftMV.get())) / drawerWidth;
+
+      const shouldClose = draggedRatio > SWIPE_CLOSE_RATIO || velocity < -SWIPE_CLOSE_VELOCITY;
+      if (shouldClose) {
+        animate(leftMV, -drawerWidth, settleTransition);
+        onMobileClose();
+      } else {
+        animate(leftMV, 0, settleTransition);
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobileOpen, drawerWidth]);
+
   return (
     <>
-    <aside
+    <motion.aside
+        ref={asideRef}
         // sc-no-reveal: opts this element out of useScrollReveal's
         // auto-attach (it matches any direct child of a ".min-h-screen"
         // element, which this is, via AppShell's wrapper div). Without this,
@@ -73,12 +196,15 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
         // silently ate the same amount of width off the right edge of every
         // page (board, timers, footer text all clipped at once). Animating
         // `left` instead keeps it truly in fixed/viewport coordinate space
-        // and sidesteps the bug. On lg the sidebar is `static` anyway, so
-        // `left` has no effect there.
-        className="fixed lg:static inset-y-0 z-50 flex flex-col shrink-0 sc-sidebar sc-no-reveal transition-[left] duration-200 ease-out"
+        // and sidesteps the bug — including while being drag-followed by a
+        // swipe-to-close gesture, driven by the `leftMV` motion value set up
+        // above. On lg the sidebar is `static` anyway, so `left` has no
+        // effect there.
+        className="fixed lg:static inset-y-0 z-50 flex flex-col shrink-0 sc-sidebar sc-no-reveal"
         style={{
           width: compact ? 68 : 216,
-          left: mobileOpen ? 0 : -(compact ? 68 : 216),
+          left: leftMV,
+          touchAction: mobileOpen ? "pan-y" : undefined,
           borderRight: "1px solid var(--hairline)",
           background: "var(--surface-0)",
           padding: "18px 12px",
@@ -344,7 +470,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen = false, onMob
           </>
         )}
       </div>
-      </aside>
+      </motion.aside>
       <PlayMenuDialog open={playDialogOpen} onOpenChange={setPlayDialogOpen} />
     </>
   );

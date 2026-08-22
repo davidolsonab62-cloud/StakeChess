@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion, useMotionValue, useSpring, useReducedMotion, MotionConfig } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/App";
 import { useTheme } from "@/context/ThemeContext";
@@ -20,6 +21,12 @@ import {
    Leaderboard / Wallet / Profile / Admin live in the app shell, not here. */
 const LOGO_URL = "/stakechess-logo.png";
 
+/* Shared button spring — used everywhere a Button/icon-button gets
+   hover/tap physics instead of the flatter CSS transition. */
+const BUTTON_SPRING = { type: "spring", stiffness: 500, damping: 30 };
+
+const MotionButton = motion(Button);
+
 const NAV_LINKS = [
   { to: "/lobby", label: "Dashboard" },
   { to: "/news", label: "News" },
@@ -33,37 +40,150 @@ const STATS = [
   { value: "842", label: "Live matches", dot: "var(--red)" },
 ];
 
-const BACK_RANK = ["♜", "♞", "♝", "♛", "♚", "♝", "♞", "♜"];
-const BACK_RANK_W = ["♖", "♘", "♗", "♕", "♔", "♗", "♘", "♖"];
-
 /**
- * Hero board, styled after the reference: a dark board receding into
- * perspective with a glowing ring pooling under the king. Board colours are
- * fixed dark on purpose — the hero panel is always dark in both themes, the
- * same way the reference design has a dark hero on every page variant.
+ * Hero board pieces. Positions are file/rank on an 8x8 grid (0-7 from the
+ * near edge). `hero: true` marks the king as the visual anchor the glow
+ * pools under. Index order here is what MOVE_SEQUENCES below refers to.
  */
 const HERO_PIECES = [
-  // { piece, file (0-7), rank (0-7 from far edge), size, colour }
+  // 0
   { p: "♚", f: 4, r: 3, size: 1.0, tone: "dark", hero: true },
+  // 1
   { p: "♞", f: 2, r: 4, size: 0.52, tone: "light" },
+  // 2
   { p: "♝", f: 6, r: 4, size: 0.48, tone: "light" },
+  // 3
   { p: "♜", f: 1, r: 2, size: 0.42, tone: "dark" },
+  // 4
   { p: "♟", f: 5, r: 5, size: 0.34, tone: "light" },
+  // 5
   { p: "♟", f: 3, r: 5, size: 0.34, tone: "dark" },
 ];
 
-/* ---------------------------------------------------------------
-   Hero art.
+/* One of these is picked at random on every mount, so the hero plays a
+   different move on every load/refresh. Each entry moves exactly one
+   piece (by its index in HERO_PIECES above) to a new square — kept to
+   short, plausible-looking hops rather than full legal chess. */
+const MOVE_SEQUENCES = [
+  { pieceIndex: 1, toF: 4, toR: 5 }, // knight hops toward center
+  { pieceIndex: 2, toF: 3, toR: 1 }, // bishop cuts across the diagonal
+  { pieceIndex: 3, toF: 1, toR: 6 }, // rook slides down the file
+  { pieceIndex: 4, toF: 5, toR: 4 }, // pawn advances one
+  { pieceIndex: 5, toF: 2, toR: 4 }, // pawn advances toward the knight
+  { pieceIndex: 2, toF: 4, toR: 6 }, // bishop threatens deep
+];
 
-   This is the rendered 3D chess scene (raytraced lighting, depth of
-   field, the glowing ring under the king). It's a real image rather
-   than CSS/SVG because that look can't be faithfully reproduced with
-   vector shapes — served as WebP (~45KB) from /public.
+/* ---------------------------------------------------------------
+   Hero board.
+
+   A live 8x8 board (not a static image) so pieces are real, individually
+   animated elements: one plays a short, randomly-chosen move shortly
+   after load, the rest idle with a slow float, and the whole board
+   tilts gently toward the pointer for a sense of depth. Square colours
+   come straight from the theme tokens (--sq-light/--sq-dark/--sq-highlight)
+   so it reads correctly in both themes without any extra styling here.
    --------------------------------------------------------------- */
 function HeroBoard() {
+  const prefersReducedMotion = useReducedMotion();
+
+  const [pieces, setPieces] = useState(() => HERO_PIECES.map((pc) => ({ ...pc })));
+  const [move] = useState(
+    () => MOVE_SEQUENCES[Math.floor(Math.random() * MOVE_SEQUENCES.length)]
+  );
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    // small delay so the move reads as deliberate, not a load glitch
+    const t = setTimeout(() => {
+      setPieces((prev) =>
+        prev.map((pc, i) =>
+          i === move.pieceIndex ? { ...pc, f: move.toF, r: move.toR } : pc
+        )
+      );
+    }, 1100);
+    return () => clearTimeout(t);
+  }, [move, prefersReducedMotion]);
+
+  // Pointer-tilt parallax on the board itself. Smoothed with a spring so
+  // it settles rather than snapping straight to the cursor.
+  const rawRotateX = useMotionValue(0);
+  const rawRotateY = useMotionValue(0);
+  const rotateX = useSpring(rawRotateX, { stiffness: 120, damping: 16 });
+  const rotateY = useSpring(rawRotateY, { stiffness: 120, damping: 16 });
+
+  const handlePointerMove = (e) => {
+    if (prefersReducedMotion) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    rawRotateY.set(px * 9);
+    rawRotateX.set(py * -9);
+  };
+  const handlePointerLeave = () => {
+    rawRotateX.set(0);
+    rawRotateY.set(0);
+  };
+
+  // Lightweight device-tilt parallax for mobile, where there's no pointer.
+  // Browsers that expose orientation events freely (Android, older iOS)
+  // get it immediately. iOS 13+ Safari gates deviceorientation behind
+  // DeviceOrientationEvent.requestPermission(), which itself only resolves
+  // when called from inside a user gesture — it can't be called on load.
+  // Rather than show a dedicated "enable motion?" prompt (which the spec
+  // rules out), we piggyback on the visitor's first tap/touch anywhere on
+  // the page: the native iOS permission dialog appears attached to an
+  // interaction the user already made, not as a separate interruption.
+  // If they decline, or nothing happens for the whole session, the board
+  // simply stays untilted on mobile — still fully usable and correct.
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    if (typeof window === "undefined" || !window.DeviceOrientationEvent) return;
+
+    const handleOrientation = (e) => {
+      if (e.beta == null || e.gamma == null) return;
+      const clampedBeta = Math.max(-20, Math.min(20, e.beta - 45));
+      const clampedGamma = Math.max(-20, Math.min(20, e.gamma));
+      rawRotateX.set((clampedBeta / 20) * -6);
+      rawRotateY.set((clampedGamma / 20) * 6);
+    };
+
+    // Browsers without the gated API (Android, etc.) — attach right away.
+    if (typeof window.DeviceOrientationEvent.requestPermission !== "function") {
+      window.addEventListener("deviceorientation", handleOrientation);
+      return () => window.removeEventListener("deviceorientation", handleOrientation);
+    }
+
+    // iOS 13+ — wait for the first real user gesture anywhere on the page,
+    // then ask inside that gesture's call stack so no separate prompt UI
+    // of our own is ever shown.
+    let cancelled = false;
+    const requestOnGesture = () => {
+      window.DeviceOrientationEvent.requestPermission()
+        .then((state) => {
+          if (!cancelled && state === "granted") {
+            window.addEventListener("deviceorientation", handleOrientation);
+          }
+        })
+        .catch(() => {
+          /* denied or unsupported — board stays untilted, no retry/nag */
+        });
+    };
+    window.addEventListener("touchstart", requestOnGesture, { once: true, passive: true });
+    window.addEventListener("pointerdown", requestOnGesture, { once: true });
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("touchstart", requestOnGesture);
+      window.removeEventListener("pointerdown", requestOnGesture);
+      window.removeEventListener("deviceorientation", handleOrientation);
+    };
+  }, [prefersReducedMotion, rawRotateX, rawRotateY]);
+
+  const kingSquare = pieces.find((pc) => pc.hero) || HERO_PIECES[0];
+
   return (
-    <div className="relative w-full">
-      {/* glow bleeding out past the image edges, so it melts into the panel */}
+    <div className="relative w-full" aria-hidden="true" style={{ perspective: 1000 }}>
+      {/* glow bleeding out past the board edges, so it melts into the panel */}
       <div
         className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[125%] h-[125%]"
         style={{
@@ -71,46 +191,122 @@ function HeroBoard() {
             "radial-gradient(ellipse at 55% 60%, rgba(124,92,252,.38), rgba(124,92,252,.10) 45%, transparent 70%)",
         }}
       />
-      <img
-        src="/hero-chess.webp"
-        alt="Chess king spotlit on a board, surrounded by other pieces"
-        className="relative h-auto select-none w-[118%] max-w-none -mr-[8%] md:-mt-6"
-        draggable="false"
+      <motion.div
+        className="relative aspect-square w-[92%] mx-auto rounded-2xl overflow-hidden"
         style={{
-          /* feather the edges so the render blends into the hero panel
-             instead of sitting in an obvious rectangle */
-          maskImage:
-            "radial-gradient(ellipse 78% 82% at 52% 52%, #000 58%, transparent 96%)",
-          WebkitMaskImage:
-            "radial-gradient(ellipse 78% 82% at 52% 52%, #000 58%, transparent 96%)",
+          rotateX,
+          rotateY,
+          transformStyle: "preserve-3d",
+          border: "1px solid rgba(150,120,255,.20)",
+          boxShadow: "0 30px 60px -20px rgba(20,10,50,.55)",
         }}
-      />
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+      >
+        {/* squares */}
+        <div className="absolute inset-0 grid grid-cols-8 grid-rows-8">
+          {Array.from({ length: 64 }).map((_, i) => {
+            const file = i % 8;
+            const rank = Math.floor(i / 8);
+            const isLight = (file + rank) % 2 === 0;
+            return (
+              <div
+                key={i}
+                style={{ background: isLight ? "var(--sq-light)" : "var(--sq-dark)" }}
+              />
+            );
+          })}
+        </div>
+
+        {/* glow pooling under the king's current square */}
+        <motion.div
+          className="pointer-events-none absolute rounded-full"
+          style={{
+            width: "22%",
+            height: "22%",
+            background: "radial-gradient(circle, var(--sq-highlight), transparent 72%)",
+          }}
+          animate={{
+            left: `${(kingSquare.f / 8) * 100 + 1.5}%`,
+            top: `${(kingSquare.r / 8) * 100 + 1.5}%`,
+          }}
+          transition={
+            prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 90, damping: 16 }
+          }
+        />
+
+        {/* pieces */}
+        {pieces.map((pc, i) => (
+          <motion.div
+            key={i}
+            className="absolute flex items-center justify-center select-none"
+            style={{
+              width: "12.5%",
+              height: "12.5%",
+              fontSize: `${pc.size * 3.6}rem`,
+              lineHeight: 1,
+              color: pc.tone === "dark" ? "#221D3D" : "#F6F4FF",
+              filter: pc.hero
+                ? "drop-shadow(0 10px 16px rgba(0,0,0,.5))"
+                : "drop-shadow(0 6px 10px rgba(0,0,0,.4))",
+              zIndex: pc.hero ? 5 : 3,
+            }}
+            animate={{ left: `${(pc.f / 8) * 100}%`, top: `${(pc.r / 8) * 100}%` }}
+            transition={
+              prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 85, damping: 15 }
+            }
+          >
+            <motion.span
+              animate={prefersReducedMotion ? undefined : { y: [0, -5, 0] }}
+              transition={{
+                duration: 3.2 + i * 0.4,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: i * 0.25,
+              }}
+            >
+              {pc.p}
+            </motion.span>
+          </motion.div>
+        ))}
+      </motion.div>
     </div>
   );
 }
 
 function PlayTile({ icon: Icon, title, subtitle, tint, onClick }) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
-    <button
+    <motion.button
       onClick={onClick}
-      className="sc-lift text-left rounded-2xl p-5 w-full"
+      className="text-left rounded-2xl p-5 w-full"
       style={{
         /* subtle colour wash per tile, like the reference */
         background: `linear-gradient(150deg, ${tint.bg} 0%, var(--surface-1) 62%)`,
         border: "1px solid var(--hairline)",
       }}
+      whileHover={
+        prefersReducedMotion
+          ? undefined
+          : { y: -4, borderColor: "var(--brand)", boxShadow: "var(--shadow-md)" }
+      }
+      whileTap={prefersReducedMotion ? undefined : { scale: 0.975, y: -1 }}
+      transition={{ type: "spring", stiffness: 400, damping: 28 }}
     >
-      <div
+      <motion.div
         className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
         style={{ background: tint.bg, color: tint.fg }}
+        whileHover={prefersReducedMotion ? undefined : { scale: 1.08, rotate: -6 }}
+        transition={{ type: "spring", stiffness: 400, damping: 20 }}
       >
         <Icon className="w-5 h-5" />
-      </div>
+      </motion.div>
       <div className="font-display font-bold text-[15px]">{title}</div>
       <div className="text-[12px] mt-0.5" style={{ color: "var(--text-secondary)" }}>
         {subtitle}
       </div>
-    </button>
+    </motion.button>
   );
 }
 
@@ -159,6 +355,7 @@ export default function Landing() {
   };
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen" style={{ background: "var(--surface-0)", color: "var(--text-primary)" }}>
       {/* ---------------- Nav ---------------- */}
       <header
@@ -192,44 +389,56 @@ export default function Landing() {
               </Link>
             ))}
 
-            <button
+            <motion.button
               onClick={toggleTheme}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
               title={isDark ? "Light mode" : "Dark mode"}
               className="sc-icon-btn ml-1 flex h-9 w-9 items-center justify-center rounded-lg"
               style={{ color: "var(--text-secondary)" }}
+              whileHover={{ scale: 1.08, rotate: isDark ? -14 : 14 }}
+              whileTap={{ scale: 0.9 }}
+              transition={BUTTON_SPRING}
             >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
+            </motion.button>
 
             {user ? (
-              <Button
+              <MotionButton
                 onClick={logout}
                 variant="outline"
                 className="ml-2 font-semibold"
                 style={{ borderColor: "var(--hairline)", color: "var(--text-primary)", background: "transparent" }}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                transition={BUTTON_SPRING}
               >
                 Logout
-              </Button>
+              </MotionButton>
             ) : (
-              <Button
+              <MotionButton
                 onClick={() => go("/login")}
                 className="ml-2 font-semibold"
                 style={{ background: "var(--brand)", color: "var(--on-brand)" }}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                transition={BUTTON_SPRING}
               >
                 Login
-              </Button>
+              </MotionButton>
             )}
           </nav>
 
-          <button
+          <motion.button
             className="md:hidden sc-icon-btn h-9 w-9 rounded-lg flex items-center justify-center"
             onClick={() => setMobileMenuOpen((o) => !o)}
             aria-label="Menu"
             style={{ color: "var(--text-secondary)" }}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.9 }}
+            transition={BUTTON_SPRING}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          </motion.button>
         </div>
 
         {mobileMenuOpen && (
@@ -252,13 +461,26 @@ export default function Landing() {
               {isDark ? "Light mode" : "Dark mode"}
             </button>
             {user ? (
-              <Button onClick={logout} variant="outline" className="mt-2" style={{ borderColor: "var(--hairline)", color: "var(--text-primary)" }}>
+              <MotionButton
+                onClick={logout}
+                variant="outline"
+                className="mt-2"
+                style={{ borderColor: "var(--hairline)", color: "var(--text-primary)" }}
+                whileTap={{ scale: 0.96 }}
+                transition={BUTTON_SPRING}
+              >
                 Logout
-              </Button>
+              </MotionButton>
             ) : (
-              <Button onClick={() => go("/login")} className="mt-2" style={{ background: "var(--brand)", color: "var(--on-brand)" }}>
+              <MotionButton
+                onClick={() => go("/login")}
+                className="mt-2"
+                style={{ background: "var(--brand)", color: "var(--on-brand)" }}
+                whileTap={{ scale: 0.96 }}
+                transition={BUTTON_SPRING}
+              >
                 Login
-              </Button>
+              </MotionButton>
             )}
           </div>
         )}
@@ -312,22 +534,28 @@ export default function Landing() {
               </p>
 
               <div className="mt-7 flex flex-wrap gap-3">
-                <Button
+                <MotionButton
                   onClick={() => go(user ? "/lobby" : "/login")}
                   className="font-semibold px-6 h-12 rounded-xl text-[13.5px] tracking-wide"
                   style={{ background: "var(--brand)", color: "var(--on-brand)" }}
+                  whileHover={{ y: -3, boxShadow: "0 12px 24px -8px rgba(124,92,252,.55)" }}
+                  whileTap={{ scale: 0.96, y: -1 }}
+                  transition={BUTTON_SPRING}
                 >
                   {user ? "ENTER LOBBY" : "START PLAYING"}
                   <ChevronRight className="w-4 h-4 ml-1.5" />
-                </Button>
-                <Button
+                </MotionButton>
+                <MotionButton
                   onClick={() => go("/live")}
                   variant="outline"
                   className="sc-hero-ghost font-semibold px-6 h-12 rounded-xl text-[13.5px] tracking-wide"
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.96, y: -1 }}
+                  transition={BUTTON_SPRING}
                 >
                   <Play className="w-4 h-4 mr-1.5" />
                   WATCH LIVE
-                </Button>
+                </MotionButton>
               </div>
 
               {/* social proof */}
@@ -452,5 +680,6 @@ export default function Landing() {
         </div>
       </footer>
     </div>
+    </MotionConfig>
   );
 }

@@ -4,6 +4,7 @@ import "@/App.css";
 import "@/index.css";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link } from "react-router-dom";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import axios from "axios";
 
 axios.defaults.withCredentials = true;
@@ -435,6 +436,22 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : null;
 };
 
+// Paths rendered outside the AppShell (no sidebar/topbar). Everything else
+// falls under the AppShell branch below and shares one persistent shell
+// instance — see AnimatedOutlet in AppShell.jsx for how navigation *within*
+// the shell (lobby -> puzzles, etc.) gets its own, more local transition
+// without remounting the sidebar/topbar on every click.
+const STANDALONE_PATHS = ["/", "/login", "/register", "/callback"];
+const SHELL_TRANSITION_KEY = "app-shell";
+
+// Fade-through + subtle scale, per the design spec: exit is quick (~180ms)
+// so the outgoing page gets out of the way fast, enter is a touch slower
+// (~220ms) so the incoming page settles rather than snapping in. Each side
+// carries its own transition rather than one shared duration.
+const PAGE_ENTER = { opacity: 1, scale: 1, transition: { duration: 0.22, ease: "easeOut" } };
+const PAGE_EXIT = { opacity: 0, scale: 0.98, transition: { duration: 0.18, ease: "easeIn" } };
+const PAGE_INITIAL = { opacity: 0, scale: 0.98 };
+
 // App Router
 function AppRouter() {
   const location = useLocation();
@@ -445,8 +462,25 @@ function AppRouter() {
     return <AuthCallback />;
   }
 
+  // Only the boundary between standalone pages and the shell (or between
+  // two different standalone pages) should replay this outer transition.
+  // Navigating between pages that already live inside the shell keeps this
+  // key constant, so AnimatePresence leaves the shell mounted and the inner
+  // AnimatedOutlet handles that transition instead — no double-fade, no
+  // needless remount of the sidebar/topbar.
+  const transitionKey = STANDALONE_PATHS.includes(location.pathname)
+    ? location.pathname
+    : SHELL_TRANSITION_KEY;
+
   return (
-    <Routes>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={transitionKey}
+        initial={PAGE_INITIAL}
+        animate={PAGE_ENTER}
+        exit={PAGE_EXIT}
+      >
+        <Routes location={location}>
       {/* Public / unauthenticated pages — no sidebar shell */}
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
@@ -586,7 +620,9 @@ function AppRouter() {
         />
         <Route path="/play-computer" element={<PlayComputer />} />
       </Route>
-    </Routes>
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -613,12 +649,14 @@ function App() {
   return (
     <div className="App min-h-screen">
       <BrowserRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <AppRouter />
-            <ThemedToaster />
-          </AuthProvider>
-        </ThemeProvider>
+        <MotionConfig reducedMotion="user">
+          <ThemeProvider>
+            <AuthProvider>
+              <AppRouter />
+              <ThemedToaster />
+            </AuthProvider>
+          </ThemeProvider>
+        </MotionConfig>
       </BrowserRouter>
     </div>
   );
