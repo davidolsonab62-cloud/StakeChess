@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -559,14 +559,14 @@ export default function Lobby() {
       )}
 
       {loading ? (
-        <>
+        <React.Fragment key="loading">
           <div className="mb-6">
             <SkeletonStatsRow count={4} />
           </div>
           <SkeletonPanel rows={4} />
-        </>
+        </React.Fragment>
       ) : (
-        <>
+        <React.Fragment key="loaded">
           {/* Stats row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
             <div className="rounded-2xl p-[18px]" style={{ background: "var(--surface-1)", border: "1px solid var(--hairline)" }}>
@@ -753,7 +753,7 @@ export default function Lobby() {
               })
             )}
           </div>
-        </>
+        </React.Fragment>
       )}
     </div>
   );

@@ -122,7 +122,17 @@ export function useScrollReveal() {
     const attach = () => {
       attachStaggerGroups();
       findRevealTargets().forEach((el) => {
-        if (seenTargets.has(el)) return;
+        // Don't trust node identity alone: React can reuse a DOM node
+        // across two conditionally-rendered branches that happen to share
+        // shape (e.g. a loading-skeleton div and its loaded replacement
+        // both being a plain <div> at the same tree position). When that
+        // happens React overwrites className wholesale on commit, which
+        // silently strips the sc-reveal/sc-reveal-visible classes we
+        // added outside its knowledge. If that's happened, the node is
+        // still in seenTargets but no longer actually carries the class -
+        // treat that as unseen so it gets a correct, fresh reveal instead
+        // of being skipped and left in a stale, unstyled state.
+        if (seenTargets.has(el) && el.classList.contains("sc-reveal")) return;
         seenTargets.add(el);
         el.classList.add("sc-reveal");
         observer.observe(el);
