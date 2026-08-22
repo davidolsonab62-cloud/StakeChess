@@ -39,7 +39,7 @@ const MotionButton = motion(Button);
 
 
 const NAV_LINKS = [
-  { to: "/lobby", label: "Dashboard" },
+  { to: "/lobby", label: "Dashboard", requiresAuth: true },
   { to: "/news", label: "News" },
 ];
 
@@ -170,6 +170,8 @@ export default function Landing() {
     navigate(path);
   };
 
+  const visibleNavLinks = NAV_LINKS.filter((l) => !l.requiresAuth || user);
+
   return (
     <MotionConfig reducedMotion="user">
     <div className="min-h-screen" style={{ background: "var(--surface-0)", color: "var(--text-primary)" }}>
@@ -194,7 +196,7 @@ export default function Landing() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((l) => (
+            {visibleNavLinks.map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
@@ -259,7 +261,7 @@ export default function Landing() {
 
         {mobileMenuOpen && (
           <div className="md:hidden px-5 pb-4 flex flex-col gap-1" style={{ borderTop: "1px solid var(--hairline)" }}>
-            {NAV_LINKS.map((l) => (
+            {visibleNavLinks.map((l) => (
               <button
                 key={l.to}
                 onClick={() => go(l.to)}
