@@ -73,6 +73,143 @@ const MOVE_SEQUENCES = [
   { pieceIndex: 2, toF: 4, toR: 6 }, // bishop threatens deep
 ];
 
+/* Unicode glyph -> piece type, so HERO_PIECES (above) doesn't need to
+   change shape to support the SVG renderer below. */
+const PIECE_TYPE_FROM_GLYPH = {
+  "♚": "k",
+  "♛": "q",
+  "♝": "b",
+  "♞": "n",
+  "♜": "r",
+  "♟": "p",
+};
+
+/**
+ * Premium piece silhouette, built from primitive SVG shapes (no external
+ * art assets) and shaded with a gradient + soft top highlight so it reads
+ * as a polished, dimensional object rather than a flat glyph. Kept purely
+ * declarative/static so it's cheap to render 6x per board.
+ */
+function ChessPieceGlyph({ type, tone, isDark, gradId }) {
+  const isDarkTone = tone === "dark";
+  const stops = isDarkTone
+    ? isDark
+      ? ["#4B4470", "#2A2440", "#131022"]
+      : ["#4A4468", "#2C2748", "#171325"]
+    : isDark
+    ? ["#FFFDFB", "#E7E0F7", "#C7BEE8"]
+    : ["#FFFFFF", "#EFEAFA", "#D8D1F0"];
+  const rim = isDarkTone
+    ? isDark
+      ? "rgba(180,150,255,.55)"
+      : "rgba(120,90,200,.35)"
+    : isDark
+    ? "rgba(255,255,255,.5)"
+    : "rgba(255,255,255,.9)";
+  const fill = `url(#${gradId})`;
+
+  const base = <ellipse cx="32" cy="83" rx="19" ry="5.5" fill={fill} stroke={rim} strokeWidth="0.75" />;
+  const highlight = (
+    <ellipse cx="27" cy="30" rx="7" ry="12" fill="#FFFFFF" opacity={isDarkTone ? 0.14 : 0.5} />
+  );
+
+  let body = null;
+  switch (type) {
+    case "p":
+      body = (
+        <>
+          <path d="M21,79 C21,62 27,53 25,42 C25,36 39,36 39,42 C37,53 43,62 43,79 Z" fill={fill} stroke={rim} strokeWidth="0.75" />
+          <ellipse cx="32" cy="42" rx="9" ry="3.5" fill={fill} stroke={rim} strokeWidth="0.6" />
+          <circle cx="32" cy="27" r="11" fill={fill} stroke={rim} strokeWidth="0.75" />
+        </>
+      );
+      break;
+    case "r":
+      body = (
+        <>
+          <path d="M19,79 C19,60 24,55 22,46 L42,46 C40,55 45,60 45,79 Z" fill={fill} stroke={rim} strokeWidth="0.75" />
+          <rect x="15" y="38" width="34" height="9" rx="2" fill={fill} stroke={rim} strokeWidth="0.6" />
+          <rect x="17" y="14" width="8" height="18" fill={fill} stroke={rim} strokeWidth="0.6" />
+          <rect x="28" y="14" width="8" height="18" fill={fill} stroke={rim} strokeWidth="0.6" />
+          <rect x="39" y="14" width="8" height="18" fill={fill} stroke={rim} strokeWidth="0.6" />
+          <rect x="15" y="30" width="34" height="6" fill={fill} stroke={rim} strokeWidth="0.6" />
+        </>
+      );
+      break;
+    case "n":
+      body = (
+        <path
+          d="M22,79 C22,68 25,62 24,55 C19,52 16,44 19,36 C21,29 27,24 31,20 C29,16 30,11 34,9 C39,7 46,10 47,16 C48,20 45,22 42,21 C44,25 43,29 39,30 C42,33 42,38 38,41 C41,45 42,51 39,56 C43,60 44,68 42,79 Z"
+          fill={fill}
+          stroke={rim}
+          strokeWidth="0.75"
+        />
+      );
+      break;
+    case "b":
+      body = (
+        <>
+          <path
+            d="M23,79 C21,62 25,54 27,46 C23,42 23,35 27,31 C23,27 25,20 32,15 C39,20 41,27 37,31 C41,35 41,42 37,46 C39,54 43,62 41,79 Z"
+            fill={fill}
+            stroke={rim}
+            strokeWidth="0.75"
+          />
+          <circle cx="32" cy="10" r="4.5" fill={fill} stroke={rim} strokeWidth="0.6" />
+          <rect x="29" y="24" width="6" height="1.6" fill={rim} opacity="0.8" transform="rotate(35 32 25)" />
+        </>
+      );
+      break;
+    case "q":
+      body = (
+        <>
+          <path
+            d="M18,79 C18,58 26,52 24,40 C22,32 42,32 40,40 C38,52 46,58 46,79 Z"
+            fill={fill}
+            stroke={rim}
+            strokeWidth="0.75"
+          />
+          <rect x="16" y="32" width="32" height="6" rx="2" fill={fill} stroke={rim} strokeWidth="0.6" />
+          {[16, 24, 32, 40, 48].map((cx) => (
+            <circle key={cx} cx={cx} cy="20" r="3.6" fill={fill} stroke={rim} strokeWidth="0.6" />
+          ))}
+        </>
+      );
+      break;
+    case "k":
+    default:
+      body = (
+        <>
+          <path
+            d="M18,79 C18,58 26,52 24,40 C22,32 42,32 40,40 C38,52 46,58 46,79 Z"
+            fill={fill}
+            stroke={rim}
+            strokeWidth="0.75"
+          />
+          <rect x="17" y="33" width="30" height="6" rx="2" fill={fill} stroke={rim} strokeWidth="0.6" />
+          <rect x="29" y="10" width="4" height="18" fill={fill} stroke={rim} strokeWidth="0.6" />
+          <rect x="22" y="16" width="18" height="4" fill={fill} stroke={rim} strokeWidth="0.6" />
+        </>
+      );
+      break;
+  }
+
+  return (
+    <svg viewBox="0 0 64 90" width="100%" height="100%" style={{ overflow: "visible" }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={stops[0]} />
+          <stop offset="55%" stopColor={stops[1]} />
+          <stop offset="100%" stopColor={stops[2]} />
+        </linearGradient>
+      </defs>
+      {base}
+      {body}
+      {highlight}
+    </svg>
+  );
+}
+
 /* ---------------------------------------------------------------
    Hero board.
 
@@ -82,8 +219,17 @@ const MOVE_SEQUENCES = [
    tilts gently toward the pointer for a sense of depth. Square colours
    come straight from the theme tokens (--sq-light/--sq-dark/--sq-highlight)
    so it reads correctly in both themes without any extra styling here.
+
+   Visual redesign: the board sits inside a CSS-3D isometric frame
+   (rotateX + rotateZ on a `perspective`d ancestor) so it reads as a
+   physical, floating slab rather than a flat top-down grid. Pieces are
+   billboarded — each is counter-rotated back to face the camera so they
+   stand upright on the tilted surface instead of lying flat on it — while
+   staying positioned via the exact same file/rank math used before.
    --------------------------------------------------------------- */
 function HeroBoard() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const prefersReducedMotion = useReducedMotion();
 
   const [pieces, setPieces] = useState(() => HERO_PIECES.map((pc) => ({ ...pc })));
@@ -181,8 +327,15 @@ function HeroBoard() {
 
   const kingSquare = pieces.find((pc) => pc.hero) || HERO_PIECES[0];
 
+  // Base isometric tilt for the "physical slab" look (fixed), on top of
+  // which the existing pointer/device-tilt springs add a few degrees of
+  // live parallax. Kept modest on the X axis so the board doesn't read as
+  // fully top-down — we still want to see the front edge/thickness.
+  const BASE_ROTATE_X = 52;
+  const BASE_ROTATE_Z = 45;
+
   return (
-    <div className="relative w-full" aria-hidden="true" style={{ perspective: 1000 }}>
+    <div className="relative w-full" aria-hidden="true" style={{ perspective: 1200 }}>
       {/* glow bleeding out past the board edges, so it melts into the panel */}
       <div
         className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[125%] h-[125%]"
@@ -191,85 +344,195 @@ function HeroBoard() {
             "radial-gradient(ellipse at 55% 60%, rgba(124,92,252,.38), rgba(124,92,252,.10) 45%, transparent 70%)",
         }}
       />
-      <motion.div
-        className="relative aspect-square w-[92%] mx-auto rounded-2xl overflow-hidden"
+      {/* soft grounding shadow the slab appears to float above — flat on
+          the panel, not part of the 3D board, so it never rotates */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-[62%] -translate-x-1/2 w-[70%] h-[18%] rounded-full"
         style={{
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d",
-          border: "1px solid rgba(150,120,255,.20)",
-          boxShadow: "0 30px 60px -20px rgba(20,10,50,.55)",
+          background: isDark
+            ? "radial-gradient(ellipse, rgba(0,0,0,.55), transparent 72%)"
+            : "radial-gradient(ellipse, rgba(60,40,120,.22), transparent 72%)",
+          filter: "blur(6px)",
         }}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-      >
-        {/* squares */}
-        <div className="absolute inset-0 grid grid-cols-8 grid-rows-8">
-          {Array.from({ length: 64 }).map((_, i) => {
-            const file = i % 8;
-            const rank = Math.floor(i / 8);
-            const isLight = (file + rank) % 2 === 0;
-            return (
-              <div
-                key={i}
-                style={{ background: isLight ? "var(--sq-light)" : "var(--sq-dark)" }}
-              />
-            );
-          })}
-        </div>
+      />
 
-        {/* glow pooling under the king's current square */}
-        <motion.div
-          className="pointer-events-none absolute rounded-full"
+      <div className="relative aspect-square w-[92%] mx-auto" style={{ transformStyle: "preserve-3d" }}>
+        {/* fixed isometric rotation — the board's resting orientation */}
+        <div
+          className="absolute inset-0"
           style={{
-            width: "22%",
-            height: "22%",
-            background: "radial-gradient(circle, var(--sq-highlight), transparent 72%)",
+            transformStyle: "preserve-3d",
+            transform: `rotateX(${BASE_ROTATE_X}deg) rotateZ(${BASE_ROTATE_Z}deg)`,
           }}
-          animate={{
-            left: `${(kingSquare.f / 8) * 100 + 1.5}%`,
-            top: `${(kingSquare.r / 8) * 100 + 1.5}%`,
-          }}
-          transition={
-            prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 90, damping: 16 }
-          }
-        />
-
-        {/* pieces */}
-        {pieces.map((pc, i) => (
+        >
+          {/* live pointer/device tilt, layered on top of the fixed tilt */}
           <motion.div
-            key={i}
-            className="absolute flex items-center justify-center select-none"
-            style={{
-              width: "12.5%",
-              height: "12.5%",
-              fontSize: `${pc.size * 3.6}rem`,
-              lineHeight: 1,
-              color: pc.tone === "dark" ? "#221D3D" : "#F6F4FF",
-              filter: pc.hero
-                ? "drop-shadow(0 10px 16px rgba(0,0,0,.5))"
-                : "drop-shadow(0 6px 10px rgba(0,0,0,.4))",
-              zIndex: pc.hero ? 5 : 3,
-            }}
-            animate={{ left: `${(pc.f / 8) * 100}%`, top: `${(pc.r / 8) * 100}%` }}
-            transition={
-              prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 85, damping: 15 }
-            }
+            className="absolute inset-0"
+            style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+            onPointerMove={handlePointerMove}
+            onPointerLeave={handlePointerLeave}
           >
-            <motion.span
-              animate={prefersReducedMotion ? undefined : { y: [0, -5, 0] }}
-              transition={{
-                duration: 3.2 + i * 0.4,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: i * 0.25,
+            {/* the physical slab: gradient body + stepped edge (fakes
+                thickness) + ambient rim glow, all via box-shadow so it
+                stays cheap (no extra blur filters/layers) */}
+            <div
+              className="absolute inset-0"
+              style={{
+                transformStyle: "preserve-3d",
+                borderRadius: "20%",
+                background: isDark
+                  ? "linear-gradient(135deg, #2C2648 0%, #171328 55%, #0D0A1B 100%)"
+                  : "linear-gradient(135deg, #FEFEFF 0%, #EEECFB 55%, #E1DEF4 100%)",
+                border: isDark ? "1px solid rgba(200,180,255,.20)" : "1px solid rgba(255,255,255,.85)",
+                boxShadow: [
+                  isDark ? "0 3px 0 rgba(9,7,18,.9)" : "0 3px 0 rgba(208,203,228,.9)",
+                  isDark ? "0 6px 0 rgba(7,5,14,.85)" : "0 6px 0 rgba(196,190,220,.85)",
+                  isDark ? "0 9px 0 rgba(5,4,10,.8)" : "0 9px 0 rgba(186,180,212,.8)",
+                  isDark ? "0 16px 26px rgba(0,0,0,.5)" : "0 16px 26px rgba(70,50,150,.16)",
+                  isDark ? "0 0 46px rgba(150,100,255,.38)" : "0 0 34px rgba(140,90,255,.20)",
+                ].join(", "),
               }}
             >
-              {pc.p}
-            </motion.span>
+              {/* inset playing surface — visible frame/bezel around the
+                  grid, with a thin warm-gold trim like the reference */}
+              <div
+                className="absolute"
+                style={{
+                  inset: "5%",
+                  transformStyle: "preserve-3d",
+                  borderRadius: "15%",
+                  border: isDark ? "1px solid rgba(255,222,150,.28)" : "1px solid rgba(180,150,90,.38)",
+                  boxShadow: isDark
+                    ? "inset 0 2px 8px rgba(0,0,0,.35)"
+                    : "inset 0 2px 8px rgba(40,30,90,.12)",
+                }}
+              >
+                {/* squares, clipped to the rounded frame */}
+                <div
+                  className="absolute inset-[2px] overflow-hidden grid grid-cols-8 grid-rows-8"
+                  style={{ borderRadius: "13%" }}
+                >
+                  {Array.from({ length: 64 }).map((_, i) => {
+                    const file = i % 8;
+                    const rank = Math.floor(i / 8);
+                    const isLight = (file + rank) % 2 === 0;
+                    return (
+                      <div
+                        key={i}
+                        style={{ background: isLight ? "var(--sq-light)" : "var(--sq-dark)" }}
+                      />
+                    );
+                  })}
+                  {/* single soft directional-light wash across the whole
+                      surface, instead of per-square gradients */}
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, rgba(255,255,255,.16) 0%, transparent 45%, rgba(0,0,0,.10) 100%)",
+                      mixBlendMode: isDark ? "overlay" : "soft-light",
+                    }}
+                  />
+                </div>
+
+                {/* glow pooling under the king's current square — flat on
+                    the surface, like the reference's focal light */}
+                <motion.div
+                  className="pointer-events-none absolute rounded-full"
+                  style={{
+                    width: "24%",
+                    height: "24%",
+                    background: "radial-gradient(circle, var(--sq-highlight), transparent 70%)",
+                  }}
+                  animate={{
+                    left: `${(kingSquare.f / 8) * 100 + 1.5}%`,
+                    top: `${(kingSquare.r / 8) * 100 + 1.5}%`,
+                  }}
+                  transition={
+                    prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 90, damping: 16 }
+                  }
+                />
+
+                {/* pieces — each billboarded (counter-rotated) so it
+                    stands upright on the tilted surface instead of lying
+                    flat on it, while its position still follows the same
+                    file/rank math as before */}
+                {pieces.map((pc, i) => {
+                  const type = PIECE_TYPE_FROM_GLYPH[pc.p] || "p";
+                  return (
+                    <motion.div
+                      key={i}
+                      className="absolute select-none"
+                      style={{
+                        width: "12.5%",
+                        height: "12.5%",
+                        transformStyle: "preserve-3d",
+                        zIndex: pc.hero ? 5 : 3,
+                      }}
+                      animate={{ left: `${(pc.f / 8) * 100}%`, top: `${(pc.r / 8) * 100}%` }}
+                      transition={
+                        prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 85, damping: 15 }
+                      }
+                    >
+                      {/* flat contact shadow, stays on the board surface */}
+                      <div
+                        className="pointer-events-none absolute rounded-full"
+                        style={{
+                          left: "50%",
+                          bottom: "6%",
+                          width: `${pc.size * 62}%`,
+                          height: `${pc.size * 26}%`,
+                          transform: "translateX(-50%)",
+                          background: "radial-gradient(ellipse, rgba(0,0,0,.42), transparent 72%)",
+                        }}
+                      />
+                      <div
+                        style={{
+                          // counter-rotate the fixed isometric tilt + the
+                          // live pointer/device tilt so the piece art
+                          // faces the camera (billboarded) rather than
+                          // lying flat on the board plane
+                          transform: `rotateZ(${-BASE_ROTATE_Z}deg) rotateX(${-BASE_ROTATE_X}deg)`,
+                          transformOrigin: "50% 92%",
+                          transformStyle: "preserve-3d",
+                          width: "100%",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "flex-end",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <motion.div
+                          style={{
+                            width: `${pc.size * 78}%`,
+                            filter: pc.hero
+                              ? "drop-shadow(0 6px 10px rgba(0,0,0,.5))"
+                              : "drop-shadow(0 4px 7px rgba(0,0,0,.4))",
+                          }}
+                          animate={prefersReducedMotion ? undefined : { y: [0, -4, 0] }}
+                          transition={{
+                            duration: 3.2 + i * 0.4,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: i * 0.25,
+                          }}
+                        >
+                          <ChessPieceGlyph
+                            type={type}
+                            tone={pc.tone}
+                            isDark={isDark}
+                            gradId={`sc-hero-piece-${i}-${pc.tone}`}
+                          />
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
           </motion.div>
-        ))}
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }
