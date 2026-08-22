@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useMotionValue, useSpring, useReducedMotion, MotionConfig } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,67 @@ import {
 /* Nav stays minimal: Dashboard, News, and the auth action.
    Leaderboard / Wallet / Profile / Admin live in the app shell, not here. */
 const LOGO_URL = "/stakechess-logo.png";
+
+/* Phase 1 (three.js hero board rebuild): toggle between the existing
+   CSS-only HeroBoard and the new WebGL HeroBoard3D without deleting
+   the old implementation. Flip to false to instantly revert.
+   This is a manual override on TOP of the automatic WebGL-support /
+   low-end-device checks below (canUse3DBoard) — flipping this to
+   true does not force the 3D board on unsupported/low-end devices,
+   it only re-enables it as a *candidate* for those checks to allow. */
+const USE_3D_BOARD = true;
+
+/* Phase 4 — lazy-loaded so the three.js / @react-three/fiber /
+   @react-three/drei / @react-spring/three bundle (and the glTF model
+   it pulls in) only downloads for visitors who actually get the 3D
+   board. Everyone else — reduced-motion aside, this is really about
+   WebGL support and low-end devices — never fetches any of it. */
+const HeroBoard3D = lazy(() => import("@/components/hero/HeroBoard3D"));
+
+/* Phase 4 — WebGL support probe. Mirrors the standard feature-detect
+   pattern (create a throwaway canvas, try to get a webgl2/webgl
+   context) rather than trusting UA sniffing alone, since UA strings
+   lie/lag far more than a direct context request does. Wrapped in
+   try/catch because some locked-down browsers throw instead of
+   returning null on getContext. */
+function supportsWebGL() {
+  if (typeof window === "undefined" || typeof document === "undefined") return false;
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext("webgl2") ||
+        canvas.getContext("webgl") ||
+        canvas.getContext("experimental-webgl"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+/* Phase 4 — low-end device guard. navigator.deviceMemory (Chromium-
+   family browsers only — Safari/Firefox simply don't expose it, so
+   this check silently no-ops there and falls through to the UA
+   patterns below) reports approximate device RAM in GB, rounded down
+   to the nearest power-of-two-ish bucket; under 4GB is a reasonable
+   line for "don't hand this device a WebGL scene + glTF model on top
+   of everything else the page is already doing." The UA fragments
+   are common budget-Android model prefixes as a fallback signal for
+   browsers that don't expose deviceMemory at all. Neither signal is
+   perfectly reliable alone, which is exactly why both are checked —
+   this only needs to catch the obvious cases, the CSS board is a
+   fully fine experience to fall back to for anyone in between. */
+function isLowEndDevice() {
+  if (typeof navigator === "undefined") return false;
+  if (typeof navigator.deviceMemory === "number" && navigator.deviceMemory < 4) {
+    return true;
+  }
+  const ua = navigator.userAgent || "";
+  if (/\bAndroid\b/i.test(ua) && /(SM-A0|SM-A1|SM-J|Redmi|Infinix|Tecno|itel)/i.test(ua)) {
+    return true;
+  }
+  return false;
+}
 
 /* Shared button spring — used everywhere a Button/icon-button gets
    hover/tap physics instead of the flatter CSS transition. */
@@ -573,12 +634,48 @@ function PlayTile({ icon: Icon, title, subtitle, tint, onClick }) {
   );
 }
 
+/* Phase 4 — Suspense fallback for the lazy-loaded HeroBoard3D chunk.
+   Same aspect-square/rounded footprint as HeroBoard3D's own root div
+   so nothing shifts when the real component swaps in, and the same
+   gradient treatment as HeroBoard3D's internal LoadingSkeleton (which
+   only covers the *model* load, after this chunk is already present)
+   so the two loading states look like one continuous state rather
+   than two different placeholders flashing in sequence. */
+function HeroBoard3DFallback({ isDark }) {
+  return (
+    <div
+      className="relative w-full aspect-square"
+      style={{
+        borderRadius: "20%",
+        overflow: "hidden",
+        background: isDark
+          ? "linear-gradient(150deg, #2C2648 0%, #171328 55%, #0D0A1B 100%)"
+          : "linear-gradient(150deg, #FEFEFF 0%, #EEECFB 55%, #E1DEF4 100%)",
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
 export default function Landing() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDark = theme === "dark";
+
+  /* Phase 4 — decide once, on mount, whether this visitor is even a
+     candidate for the 3D board. Computed with a lazy useState
+     initializer (not a plain const) so it only runs the two checks
+     once per mount instead of on every render, same pattern already
+     used elsewhere in this file for one-time client-side reads.
+     supportsWebGL/isLowEndDevice both already guard the
+     typeof window === "undefined" case internally, so this is safe
+     to evaluate during the initial render with no hydration-mismatch
+     risk beyond what those two functions already handle. */
+  const [canUse3DBoard] = useState(
+    () => USE_3D_BOARD && supportsWebGL() && !isLowEndDevice()
+  );
 
   // Nav hides on scroll-down, reveals on scroll-up — tracks the last
   // scroll position and compares each tick.
@@ -849,7 +946,13 @@ export default function Landing() {
               </div>
             </div>
 
-            <HeroBoard />
+            {canUse3DBoard ? (
+              <Suspense fallback={<HeroBoard3DFallback isDark={isDark} />}>
+                <HeroBoard3D />
+              </Suspense>
+            ) : (
+              <HeroBoard />
+            )}
           </div>
 
           {/* Stats bar — inside the hero panel, as in the reference */}
@@ -940,6 +1043,34 @@ export default function Landing() {
             <Link to="/news" className="no-underline" style={{ color: "var(--text-secondary)" }}>News</Link>
             <Link to="/live" className="no-underline" style={{ color: "var(--text-secondary)" }}>Watch</Link>
           </div>
+        </div>
+        {/* CC BY 4.0 attribution required by the hero board's chess set
+            model license — see the credit note in HeroBoard3D.jsx. */}
+        <div
+          className="max-w-6xl mx-auto px-5 md:px-8 pb-6 text-[11px]"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          Chess set model by{" "}
+          <a
+            href="https://sketchfab.com/3d-models/realistic-chess-set-3d-model-a07b3ac3f57f4fa3822e3f2d6241a7b0"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            noob-3d
+          </a>{" "}
+          (Sketchfab), licensed{" "}
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            CC BY 4.0
+          </a>
+          .
         </div>
       </footer>
     </div>
